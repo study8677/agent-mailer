@@ -160,6 +160,7 @@ let currentView = null; // {type: 'inbox', address} | {type: 'compose'} | {type:
 let expandedMsg = null;
 let pollTimer = null;
 let pollInterval = 5000;
+let msgCache = {}; // id -> message object
 
 // --- API helpers ---
 async function api(path, opts) {
@@ -234,6 +235,7 @@ async function renderInbox() {
     return;
   }
 
+  msgs.forEach(m => msgCache[m.id] = m);
   main.innerHTML = `
     <div class="card">
       <h2>Inbox: ${esc(address)}</h2>
@@ -269,13 +271,21 @@ function renderMsgDetail(m) {
       ${m.parent_id ? `<div class="meta">Reply to: ${m.parent_id.substring(0, 8)}...</div>` : ''}
       <div class="msg-body">${esc(m.body)}</div>
       <span class="thread-link" onclick="showThread('${m.thread_id}', '${currentView?.address || ''}', event)">View full thread</span>
-      <span style="margin-left:12px" class="thread-link" onclick="replyTo('${m.from_agent}', '${m.subject}', '${m.id}', event)">Reply</span>
+      <span style="margin-left:12px" class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
     </div>`;
 }
 
-function toggleMsg(msgId, ev) {
+async function toggleMsg(msgId, ev) {
   if (ev.target.classList.contains('thread-link')) return;
-  expandedMsg = expandedMsg === msgId ? null : msgId;
+  const expanding = expandedMsg !== msgId;
+  expandedMsg = expanding ? msgId : null;
+  if (expanding) {
+    // auto mark as read
+    try {
+      await api(`/messages/${encodeURIComponent(msgId)}/read`, { method: 'PATCH' });
+      refreshSidebar();
+    } catch (e) { /* ignore */ }
+  }
   renderInbox();
 }
 
@@ -302,7 +312,7 @@ async function showThread(threadId, fromAddress, ev) {
     </div>`;
 }
 
-async function showCompose(prefillTo, prefillSubject, prefillParentId) {
+async function showCompose(prefillTo, prefillSubject, prefillParentId, originalBody) {
   clearNav();
   document.getElementById('navCompose').classList.add('active');
   currentView = { type: 'compose' };
@@ -312,7 +322,7 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId) {
   const main = document.getElementById('main');
   main.innerHTML = `
     <div class="card">
-      <h2>Compose Message</h2>
+      <h2>${prefillParentId ? 'Reply' : 'Compose Message'}</h2>
       <div class="compose-form">
         <div>
           <label>To</label>
@@ -328,6 +338,11 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId) {
           <label>Body</label>
           <textarea id="composeBody" placeholder="Write your message..."></textarea>
         </div>
+        ${originalBody ? `
+        <div>
+          <label style="color:var(--muted)">Original Message</label>
+          <div style="background:#f3f4f6;border-left:3px solid var(--primary);padding:12px 16px;border-radius:4px;font-size:13px;white-space:pre-wrap;color:var(--muted);max-height:300px;overflow-y:auto">${esc(originalBody)}</div>
+        </div>` : ''}
         <input type="hidden" id="composeParentId" value="${prefillParentId || ''}">
         <div style="display:flex;gap:12px;align-items:center">
           <button class="btn btn-primary" id="sendBtn" onclick="doSend()">Send</button>
@@ -337,10 +352,12 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId) {
     </div>`;
 }
 
-function replyTo(toAddress, subject, parentId, ev) {
+function replyToMsg(msgId, ev) {
   if (ev) ev.stopPropagation();
-  const reSubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`;
-  showCompose(toAddress, reSubject, parentId);
+  const m = msgCache[msgId];
+  if (!m) return;
+  const reSubject = m.subject && m.subject.startsWith('Re:') ? m.subject : `Re: ${m.subject || ''}`;
+  showCompose(m.from_agent, reSubject, m.id, m.body);
 }
 
 async function doSend() {

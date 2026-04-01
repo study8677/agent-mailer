@@ -279,3 +279,100 @@ async def test_send_with_attachments(client, agents):
     assert resp.status_code == 200
     msg = resp.json()
     assert msg["attachments"] == ["/path/to/spec.md", "/path/to/design.png"]
+
+
+async def test_body_html_renders_markdown(client, agents):
+    resp = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send",
+        "subject": "Markdown test",
+        "body": "# Hello\n\nThis is **bold** and `code`.",
+    })
+    assert resp.status_code == 200
+    msg = resp.json()
+    assert "<h1>Hello</h1>" in msg["body_html"]
+    assert "<strong>bold</strong>" in msg["body_html"]
+    assert "<code>code</code>" in msg["body_html"]
+
+
+async def test_body_html_renders_fenced_code(client, agents):
+    resp = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send",
+        "subject": "Code block",
+        "body": "```python\nprint('hello')\n```",
+    })
+    assert resp.status_code == 200
+    msg = resp.json()
+    assert "<code" in msg["body_html"]
+    assert "print" in msg["body_html"]
+
+
+async def test_send_to_multiple_recipients(client, agents):
+    resp = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": [agents["coder"]["address"], agents["reviewer"]["address"]],
+        "action": "send",
+        "subject": "Multi-send",
+        "body": "Hello everyone",
+    })
+    assert resp.status_code == 200
+    msgs = resp.json()
+    assert isinstance(msgs, list)
+    assert len(msgs) == 2
+    addrs = {m["to_agent"] for m in msgs}
+    assert addrs == {agents["coder"]["address"], agents["reviewer"]["address"]}
+    # all share the same thread
+    assert msgs[0]["thread_id"] == msgs[1]["thread_id"]
+
+
+async def test_send_to_multiple_validates_all_recipients(client, agents):
+    resp = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": [agents["coder"]["address"], "nonexistent@local"],
+        "action": "send",
+        "subject": "Fail",
+        "body": "Should fail",
+    })
+    assert resp.status_code == 404
+
+
+async def test_send_single_recipient_returns_object(client, agents):
+    """Single string to_agent still returns a single object (backward compat)."""
+    resp = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send",
+        "subject": "Single",
+        "body": "Just one",
+    })
+    assert resp.status_code == 200
+    msg = resp.json()
+    assert isinstance(msg, dict)
+    assert msg["to_agent"] == agents["coder"]["address"]
+
+
+async def test_inbox_body_html(client, agents):
+    """Inbox messages include body_html."""
+    await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send",
+        "subject": "MD",
+        "body": "**important**",
+    })
+    resp = await client.get(
+        f"/messages/inbox/{agents['coder']['address']}",
+        params={"agent_id": agents["coder"]["id"]},
+    )
+    msgs = resp.json()
+    assert len(msgs) == 1
+    assert "<strong>important</strong>" in msgs[0]["body_html"]

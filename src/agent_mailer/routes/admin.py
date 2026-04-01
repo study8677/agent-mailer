@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from agent_mailer.models import AdminSendRequest, AgentStats, MessageResponse
+from agent_mailer.models import AdminSendRequest, AgentStats, MessageResponse, render_body_html
 
 router = APIRouter(prefix="/admin")
 
@@ -18,6 +18,7 @@ def _row_to_response(row) -> MessageResponse:
     d = dict(row)
     d["attachments"] = json.loads(d["attachments"])
     d["is_read"] = bool(d["is_read"])
+    d["body_html"] = render_body_html(d["body"])
     return MessageResponse(**d)
 
 
@@ -92,17 +93,21 @@ async def admin_inbox(address: str, request: Request, all: bool = False):
     return [_row_to_response(row) for row in rows]
 
 
-@router.post("/messages/send", response_model=MessageResponse)
+@router.post("/messages/send", response_model=MessageResponse | list[MessageResponse])
 async def admin_send(req: AdminSendRequest, request: Request):
     """Send a message as the human operator."""
     db = request.app.state.db
 
     await _ensure_human_operator(db)
 
-    # validate recipient address exists
-    cursor = await db.execute("SELECT id FROM agents WHERE address = ?", (req.to_agent,))
-    if not await cursor.fetchone():
-        raise HTTPException(status_code=404, detail=f"Recipient address '{req.to_agent}' not found")
+    # normalize to_agent to list
+    recipients = req.to_agent if isinstance(req.to_agent, list) else [req.to_agent]
+
+    # validate all recipient addresses exist
+    for addr in recipients:
+        cursor = await db.execute("SELECT id FROM agents WHERE address = ?", (addr,))
+        if not await cursor.fetchone():
+            raise HTTPException(status_code=404, detail=f"Recipient address '{addr}' not found")
 
     if req.action in ("reply", "forward") and not req.parent_id:
         raise HTTPException(status_code=400, detail="parent_id is required for reply/forward")
@@ -116,23 +121,29 @@ async def admin_send(req: AdminSendRequest, request: Request):
             raise HTTPException(status_code=404, detail="Parent message not found")
         thread_id = parent["thread_id"]
 
-    msg_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
+    body_html = render_body_html(req.body)
 
-    await db.execute(
-        """INSERT INTO messages (id, thread_id, from_agent, to_agent, action, subject, body, attachments, is_read, parent_id, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)""",
-        (msg_id, thread_id, HUMAN_OPERATOR_ADDRESS, req.to_agent, req.action,
-         req.subject, req.body, "[]", req.parent_id, now),
-    )
+    results = []
+    for addr in recipients:
+        msg_id = str(uuid.uuid4())
+        await db.execute(
+            """INSERT INTO messages (id, thread_id, from_agent, to_agent, action, subject, body, attachments, is_read, parent_id, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)""",
+            (msg_id, thread_id, HUMAN_OPERATOR_ADDRESS, addr, req.action,
+             req.subject, req.body, "[]", req.parent_id, now),
+        )
+        results.append(MessageResponse(
+            id=msg_id, thread_id=thread_id, from_agent=HUMAN_OPERATOR_ADDRESS,
+            to_agent=addr, action=req.action, subject=req.subject,
+            body=req.body, body_html=body_html, attachments=[], is_read=False,
+            parent_id=req.parent_id, created_at=now,
+        ))
     await db.commit()
 
-    return MessageResponse(
-        id=msg_id, thread_id=thread_id, from_agent=HUMAN_OPERATOR_ADDRESS,
-        to_agent=req.to_agent, action=req.action, subject=req.subject,
-        body=req.body, attachments=[], is_read=False,
-        parent_id=req.parent_id, created_at=now,
-    )
+    if len(results) == 1:
+        return results[0]
+    return results
 
 
 @router.get("/ui", response_class=HTMLResponse)
