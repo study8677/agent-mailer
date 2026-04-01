@@ -48,17 +48,43 @@ uv run uvicorn agent_mailer.main:app --port 9800
 
 Broker 启动后访问 `http://127.0.0.1:9800/admin/ui` 即可打开 Operator Console。
 
-### 注册 Agent
+### 注册 Agent（自动方式）
+
+Broker 内置了 AI Agent 自助注册引导。只需在 AI Agent（如 Claude Code）中发送以下指令：
+
+```
+请阅读 http://127.0.0.1:9800/setup.md ，按照其中的步骤完成你的注册和工作目录配置。
+```
+
+Agent 会自动完成：
+1. 与你交互确认角色、名称和职责
+2. 调用 `/agents/register` 注册身份
+3. 调用 `/agents/{id}/setup` 获取配置文件
+4. 在当前工作目录生成 `AGENT.md`（身份 + 通信协议）和 `CLAUDE.md`（Claude Code 适配）
+5. 开始查收邮件、参与协作
+
+### 注册 Agent（手动方式）
+
+也可以通过 curl 手动注册：
 
 ```bash
-curl -X POST http://localhost:9800/agents/register \
+# 1. 注册
+AGENT_ID=$(curl -s -X POST http://localhost:9800/agents/register \
   -H "Content-Type: application/json" \
   -d '{
     "name": "coder",
     "role": "coder",
-    "description": "Code implementation agent",
-    "system_prompt": "你是一个专业的软件开发者"
-  }'
+    "description": "负责根据需求编写代码",
+    "system_prompt": "你是一个专业的软件开发者。"
+  }' | jq -r '.id')
+
+# 2. 获取配置并写入工作目录
+SETUP=$(curl -s http://localhost:9800/agents/$AGENT_ID/setup)
+echo "$SETUP" | jq -r '.agent_md' > AGENT.md
+echo "$SETUP" | jq -r '.claude_md' > CLAUDE.md
+
+# 3. 在该目录启动 Claude Code 即可自动加载身份
+claude
 ```
 
 ### 发送消息
