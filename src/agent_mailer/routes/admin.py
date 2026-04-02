@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from agent_mailer.models import AdminSendRequest, AgentStats, MessageResponse, render_body_html
+from agent_mailer.models import AdminSendRequest, AgentStats, MessageResponse, ThreadSummary, render_body_html
 
 router = APIRouter(prefix="/admin")
 
@@ -75,18 +75,54 @@ async def agents_stats(request: Request):
     return [AgentStats(**dict(row)) for row in rows]
 
 
+@router.get("/threads/summary", response_model=list[ThreadSummary])
+async def threads_summary(request: Request):
+    """List all message threads for the operator console (newest activity first)."""
+    db = request.app.state.db
+    cursor = await db.execute(
+        """
+        SELECT
+            m.thread_id AS thread_id,
+            MAX(m.created_at) AS last_activity,
+            COUNT(*) AS message_count,
+            SUM(CASE WHEN m.is_read = 0 THEN 1 ELSE 0 END) AS unread_count,
+            (
+                SELECT m2.subject
+                FROM messages m2
+                WHERE m2.thread_id = m.thread_id
+                ORDER BY m2.created_at ASC
+                LIMIT 1
+            ) AS preview_subject
+        FROM messages m
+        GROUP BY m.thread_id
+        ORDER BY last_activity DESC
+        """
+    )
+    rows = await cursor.fetchall()
+    return [
+        ThreadSummary(
+            thread_id=row["thread_id"],
+            last_activity=row["last_activity"],
+            message_count=int(row["message_count"]),
+            unread_count=int(row["unread_count"]),
+            preview_subject=row["preview_subject"] or "",
+        )
+        for row in rows
+    ]
+
+
 @router.get("/messages/inbox/{address}", response_model=list[MessageResponse])
 async def admin_inbox(address: str, request: Request, all: bool = False):
     """Peek at any agent's inbox without identity verification."""
     db = request.app.state.db
     if all:
         cursor = await db.execute(
-            "SELECT * FROM messages WHERE to_agent = ? ORDER BY created_at",
+            "SELECT * FROM messages WHERE to_agent = ? ORDER BY created_at DESC",
             (address,),
         )
     else:
         cursor = await db.execute(
-            "SELECT * FROM messages WHERE to_agent = ? AND is_read = 0 ORDER BY created_at",
+            "SELECT * FROM messages WHERE to_agent = ? AND is_read = 0 ORDER BY created_at DESC",
             (address,),
         )
     rows = await cursor.fetchall()

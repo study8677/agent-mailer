@@ -24,6 +24,53 @@ async def test_stats_empty(client):
     assert resp.json() == []
 
 
+async def test_threads_summary_empty(client):
+    resp = await client.get("/admin/threads/summary")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+async def test_threads_summary(client, agents):
+    await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send",
+        "subject": "Alpha",
+        "body": "First",
+    })
+    send2 = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["reviewer"]["address"],
+        "action": "send",
+        "subject": "Beta",
+        "body": "Other thread",
+    })
+    thread_b = send2.json()["thread_id"]
+    first_beta_msg = send2.json()["id"]
+    await client.post("/messages/send", json={
+        "agent_id": agents["reviewer"]["id"],
+        "from_agent": agents["reviewer"]["address"],
+        "to_agent": agents["planner"]["address"],
+        "action": "reply",
+        "subject": "Re: Beta — follow up",
+        "body": "Done",
+        "parent_id": first_beta_msg,
+    })
+
+    resp = await client.get("/admin/threads/summary")
+    assert resp.status_code == 200
+    summaries = resp.json()
+    assert len(summaries) == 2
+    # Newest thread first (reply bumped Beta thread)
+    assert summaries[0]["thread_id"] == thread_b
+    # preview_subject = first message in thread, not latest reply
+    assert summaries[0]["preview_subject"] == "Beta"
+    assert summaries[0]["message_count"] == 2
+    assert summaries[0]["unread_count"] == 2
+
+
 async def test_stats_counts(client, agents):
     # planner sends 2 messages to coder
     for i in range(2):

@@ -9,6 +9,7 @@
   --bg: #f5f5f5;
   --sidebar-bg: #1e1e2e;
   --sidebar-text: #cdd6f4;
+  --msg-subject-human: #1e40af;
   --sidebar-hover: #313244;
   --sidebar-active: #45475a;
   --card-bg: #fff;
@@ -38,8 +39,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .layout { display: flex; flex: 1; overflow: hidden; }
 
 /* Sidebar */
-.sidebar { width: 240px; background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar { width: 280px; min-width: 240px; max-width: min(380px, 40vw); background: var(--sidebar-bg); color: var(--sidebar-text); display: flex; flex-direction: column; flex-shrink: 0; }
 .sidebar-section { padding: 12px 16px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+.sidebar-toolbar { padding: 8px 12px 4px; display: flex; flex-direction: column; gap: 6px; }
+.sidebar-toolbar label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
+#sidebarModeSelect { width: 100%; background: var(--sidebar-hover); color: var(--sidebar-text); border: 1px solid #45475a; border-radius: 6px; padding: 6px 8px; font-size: 12px; cursor: pointer; }
+#sidebarModeSelect:focus { outline: 1px solid var(--primary); outline-offset: 1px; }
 .agent-list { flex: 1; overflow-y: auto; }
 .agent-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid transparent; transition: background 0.15s; }
 .agent-item:hover { background: var(--sidebar-hover); }
@@ -47,6 +52,18 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .agent-item .agent-info { overflow: hidden; }
 .agent-item .agent-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .agent-item .agent-role { font-size: 11px; color: var(--muted); }
+/* By Threads: show full first-message subject (multi-line), badge top-aligned */
+.agent-item.thread-sidebar-item { align-items: flex-start; gap: 10px; }
+.agent-item.thread-sidebar-item .agent-info { overflow: visible; flex: 1; min-width: 0; }
+.agent-item.thread-sidebar-item .agent-name {
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.35;
+  font-size: 13px;
+}
+.agent-item.thread-sidebar-item .badge { flex-shrink: 0; margin-top: 2px; }
 .badge { background: var(--badge-bg); color: var(--badge-text); font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 10px; min-width: 18px; text-align: center; }
 .badge.zero { background: var(--muted); opacity: 0.5; }
 
@@ -73,6 +90,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .msg-from { font-weight: 600; font-size: 13px; }
 .msg-time { font-size: 11px; color: var(--muted); }
 .msg-subject { font-size: 14px; margin-bottom: 2px; }
+.msg-subject.msg-subject-human { color: var(--msg-subject-human); font-weight: 600; }
+.msg-detail-subject { font-size: 15px; font-weight: 500; margin-bottom: 10px; line-height: 1.4; }
+.msg-detail-subject.msg-subject-human { color: var(--msg-subject-human); font-weight: 600; }
+.thread-subject-line { font-weight: 500; margin: 4px 0 6px; font-size: 14px; line-height: 1.4; }
+.thread-subject-line.msg-subject-human { color: var(--msg-subject-human); font-weight: 600; }
 .msg-preview { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .msg-action-tag { font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
 .msg-action-tag.send { background: #dbeafe; color: #1d4ed8; }
@@ -140,7 +162,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 <div class="layout">
   <div class="sidebar">
-    <div class="sidebar-section">Agents</div>
+    <div class="sidebar-toolbar">
+      <label for="sidebarModeSelect">Sidebar</label>
+      <select id="sidebarModeSelect" title="List by agents or threads">
+        <option value="agents" selected>By Agents</option>
+        <option value="threads">By Threads</option>
+      </select>
+    </div>
     <div class="agent-list" id="agentList"></div>
     <div class="nav-buttons">
       <button class="nav-btn" id="navCompose" onclick="showCompose()">Compose</button>
@@ -154,9 +182,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 <script>
 const BASE = '';
+/** Matches server HUMAN_OPERATOR_ADDRESS (admin compose sender). */
+const HUMAN_OPERATOR_ADDRESS = 'human-operator@local';
+function humanSubjectClass(fromAgent) {
+  return fromAgent === HUMAN_OPERATOR_ADDRESS ? ' msg-subject-human' : '';
+}
 let agents = [];
 let statsData = [];
-let currentView = null; // {type: 'inbox', address} | {type: 'compose'} | {type: 'stats'} | {type: 'thread', threadId, fromAddress}
+let threadsData = [];
+let sidebarMode = 'agents'; // 'agents' | 'threads'
+let currentView = null; // {type: 'inbox', address} | {type: 'compose'} | {type: 'stats'} | {type: 'thread', threadId, fromAddress, fromThreadSidebar}
 let expandedMsg = null;
 let pollTimer = null;
 let pollInterval = 5000;
@@ -191,14 +226,38 @@ async function fetchThread(threadId) {
   return api(`/messages/thread/${encodeURIComponent(threadId)}`);
 }
 
+async function fetchThreadsSummary() {
+  threadsData = await api('/admin/threads/summary');
+  return threadsData;
+}
+
 // --- Sidebar ---
 async function refreshSidebar() {
-  await fetchStats();
   const list = document.getElementById('agentList');
+  if (sidebarMode === 'threads') {
+    await fetchThreadsSummary();
+    const activeTid = currentView?.type === 'thread' ? currentView.threadId : null;
+    list.innerHTML = threadsData.length === 0
+      ? '<div class="empty" style="padding:20px 16px;font-size:12px">No threads yet.</div>'
+      : threadsData.map(t => `
+    <div class="agent-item thread-sidebar-item ${t.thread_id === activeTid ? 'active' : ''}"
+         data-thread-id="${t.thread_id}"
+         onclick="showThreadFromSidebar(this.dataset.threadId)">
+      <div class="agent-info">
+        <div class="agent-name">${esc(t.preview_subject) || '(no subject)'}</div>
+        <div class="agent-role">${esc(t.thread_id.substring(0, 8))}&hellip; &middot; ${t.message_count} msg</div>
+      </div>
+      <span class="badge ${t.unread_count === 0 ? 'zero' : ''}">${t.unread_count}</span>
+    </div>
+  `).join('');
+    return;
+  }
+
+  await fetchStats();
   const activeAddr = currentView?.type === 'inbox' ? currentView.address : null;
   list.innerHTML = statsData.map(a => `
     <div class="agent-item ${a.address === activeAddr ? 'active' : ''}"
-         onclick="showInbox('${a.address}')">
+         onclick='showInbox(${JSON.stringify(a.address)})'>
       <div class="agent-info">
         <div class="agent-name">${esc(a.name)}</div>
         <div class="agent-role">${esc(a.role)} &middot; ${esc(a.address)}</div>
@@ -218,9 +277,7 @@ function clearNav() {
 async function showInbox(address) {
   clearNav();
   currentView = { type: 'inbox', address };
-  document.querySelectorAll('.agent-item').forEach(el => {
-    if (el.querySelector('.agent-role')?.textContent.includes(address)) el.classList.add('active');
-  });
+  await refreshSidebar();
   await renderInbox();
 }
 
@@ -257,20 +314,22 @@ function renderMsgItem(m) {
           <span class="msg-time">${fmtTime(m.created_at)}</span>
         </span>
       </div>
-      <div class="msg-subject">${esc(m.subject) || '(no subject)'}</div>
+      ${!isExpanded ? `<div class="msg-subject${humanSubjectClass(m.from_agent)}">${esc(m.subject) || '(no subject)'}</div>` : ''}
       ${!isExpanded ? `<div class="msg-preview">${esc(m.body.substring(0, 100))}</div>` : ''}
       ${isExpanded ? renderMsgDetail(m) : ''}
     </li>`;
 }
 
 function renderMsgDetail(m) {
+  const subjText = esc(m.subject) || '(no subject)';
   return `
     <div class="msg-detail">
+      <div class="msg-detail-subject${humanSubjectClass(m.from_agent)}">${subjText}</div>
       <div class="meta">From: ${esc(m.from_agent)} &rarr; To: ${esc(m.to_agent)}</div>
       <div class="meta">Action: ${m.action} | Thread: ${m.thread_id.substring(0, 8)}...</div>
       ${m.parent_id ? `<div class="meta">Reply to: ${m.parent_id.substring(0, 8)}...</div>` : ''}
       <div class="msg-body">${esc(m.body)}</div>
-      <span class="thread-link" onclick="showThread('${m.thread_id}', '${currentView?.address || ''}', event)">View full thread</span>
+      <span class="thread-link" data-thread-id="${m.thread_id}" onclick="event.stopPropagation(); showThreadFromInboxLink(this.dataset.threadId)">View full thread</span>
       <span style="margin-left:12px" class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
     </div>`;
 }
@@ -289,15 +348,38 @@ async function toggleMsg(msgId, ev) {
   renderInbox();
 }
 
-async function showThread(threadId, fromAddress, ev) {
+async function showThreadFromInboxLink(threadId) {
+  const addr = currentView?.type === 'inbox' ? currentView.address : '';
+  await showThread(threadId, addr, null, false);
+}
+
+async function showThreadFromSidebar(threadId) {
+  clearNav();
+  currentView = { type: 'thread', threadId, fromAddress: '', fromThreadSidebar: true };
+  await refreshSidebar();
+  await renderThreadView();
+}
+
+async function showThread(threadId, fromAddress, ev, fromThreadSidebar = false) {
   if (ev) ev.stopPropagation();
-  currentView = { type: 'thread', threadId, fromAddress };
+  currentView = { type: 'thread', threadId, fromAddress: fromAddress || '', fromThreadSidebar };
+  await renderThreadView();
+}
+
+async function renderThreadView() {
+  if (currentView?.type !== 'thread') return;
+  const { threadId, fromAddress, fromThreadSidebar } = currentView;
   const msgs = await fetchThread(threadId);
   const main = document.getElementById('main');
+  const backLabel = fromThreadSidebar ? '\u2190 Back to thread list' : '\u2190 Back to inbox';
+  const firstSubject = msgs.length > 0 && String(msgs[0].subject || '').trim()
+    ? String(msgs[0].subject).trim()
+    : '';
+  const threadTitle = firstSubject || '(no subject)';
   main.innerHTML = `
-    <button class="back-btn" onclick="showInbox('${fromAddress}')">&larr; Back to inbox</button>
+    <button type="button" class="back-btn" id="threadBackBtn">${backLabel}</button>
     <div class="card">
-      <h2>Thread ${threadId.substring(0, 8)}...</h2>
+      <h2>${esc(threadTitle)}</h2>
       ${msgs.map(m => `
         <div class="thread-msg">
           <div class="thread-meta">
@@ -305,11 +387,22 @@ async function showThread(threadId, fromAddress, ev) {
             <span class="msg-action-tag ${m.action}" style="margin-left:6px">${m.action}</span>
             <span style="margin-left:8px;color:var(--muted)">${fmtTime(m.created_at)}</span>
           </div>
-          ${m.subject ? `<div style="font-weight:500;margin:4px 0">${esc(m.subject)}</div>` : ''}
+          ${m.subject ? `<div class="thread-subject-line${humanSubjectClass(m.from_agent)}">${esc(m.subject)}</div>` : ''}
           <div class="thread-body">${esc(m.body)}</div>
         </div>
       `).join('')}
     </div>`;
+  document.getElementById('threadBackBtn').onclick = () => {
+    if (fromThreadSidebar) threadBackToSidebarList();
+    else showInbox(fromAddress);
+  };
+}
+
+function threadBackToSidebarList() {
+  currentView = { type: 'threadList' };
+  document.getElementById('main').innerHTML =
+    '<div class="empty">Select a thread from the sidebar, or switch to By Agents.</div>';
+  void refreshSidebar();
 }
 
 async function showCompose(prefillTo, prefillSubject, prefillParentId, originalBody) {
@@ -448,12 +541,22 @@ function startPolling() {
     await refreshSidebar();
     if (currentView?.type === 'inbox') await renderInbox();
     if (currentView?.type === 'stats') await renderStats();
+    if (currentView?.type === 'thread') await renderThreadView();
   }, pollInterval);
 }
 
 function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
+
+document.getElementById('sidebarModeSelect').addEventListener('change', async (e) => {
+  sidebarMode = e.target.value;
+  clearNav();
+  currentView = null;
+  document.getElementById('main').innerHTML =
+    '<div class="empty">Select an agent or thread, or open Compose / Stats.</div>';
+  await refreshSidebar();
+});
 
 document.getElementById('pollSelect').addEventListener('change', (e) => {
   pollInterval = parseInt(e.target.value);

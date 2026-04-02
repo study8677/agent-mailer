@@ -82,3 +82,11 @@ class AgentStats(BaseModel):
     messages_sent: int = 0
     messages_replied: int = 0
     messages_forwarded: int = 0
+
+
+class ThreadSummary(BaseModel):
+    thread_id: str
+    last_activity: str
+    message_count: int
+    unread_count: int
+    preview_subject: str = ""
