@@ -119,6 +119,7 @@ Body: {{"agent_id": "{agent['id']}", "from_agent": "{agent['address']}", "to_age
 ### 标记已读
 ```
 PATCH {broker_url}/messages/{{message_id}}/read
+PATCH {broker_url}/messages/{{message_id}}/unread
 ```
 
 ### 查看会话线程

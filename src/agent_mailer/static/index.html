@@ -602,6 +602,7 @@ function renderMsgDetail(m) {
         <span class="thread-link" data-thread-id="${m.thread_id}" onclick="event.stopPropagation(); showThreadFromInboxLink(this.dataset.threadId)">View full thread</span>
         <span class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
         <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">Forward</span>
+        ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">Mark as unread</span>` : ''}
         <button type="button" class="btn btn-secondary msg-trash-action" style="font-size:12px;padding:4px 10px"
           onclick="event.stopPropagation(); trashSingleMessage('${m.id}', { fromInbox: true })">Move message to trash</button>
       </div>
@@ -722,6 +723,7 @@ async function renderThreadView() {
           ${!st.trashed ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
             <span class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
             <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">Forward</span>
+            ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">Mark as unread</span>` : ''}
             <button type="button" class="btn btn-secondary" style="font-size:12px;padding:4px 10px" onclick="trashSingleMessage('${m.id}', { fromThread: true })">Move message to trash</button>
           </div>` : ''}
         </div>
@@ -907,6 +909,19 @@ function replyToMsg(msgId, ev) {
   if (!m) return;
   const reSubject = m.subject && m.subject.startsWith('Re:') ? m.subject : `Re: ${m.subject || ''}`;
   showCompose(m.from_agent, reSubject, m.id, m.body, m.body_html);
+}
+
+async function markMsgUnread(msgId, ev) {
+  if (ev) ev.stopPropagation();
+  try {
+    const updated = await api(`/messages/${encodeURIComponent(msgId)}/unread`, { method: 'PATCH' });
+    msgCache[msgId] = { ...msgCache[msgId], ...updated };
+    await refreshSidebar();
+    if (currentView?.type === 'inbox') await renderInbox();
+    if (currentView?.type === 'thread') await renderThreadView();
+  } catch (e) {
+    alert(e.message);
+  }
 }
 
 function forwardToMsg(msgId, ev) {

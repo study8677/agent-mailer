@@ -359,6 +359,25 @@ async def test_mark_read_not_found(client, agents):
     assert resp.status_code == 404
 
 
+async def test_mark_unread(client, agents):
+    send_resp = await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send", "subject": "Task", "body": "Do",
+    })
+    msg_id = send_resp.json()["id"]
+    await client.patch(f"/messages/{msg_id}/read")
+    resp = await client.patch(f"/messages/{msg_id}/unread")
+    assert resp.status_code == 200
+    assert resp.json()["is_read"] is False
+
+
+async def test_mark_unread_not_found(client, agents):
+    resp = await client.patch("/messages/nonexistent/unread")
+    assert resp.status_code == 404
+
+
 async def test_thread_returns_ordered_messages(client, agents):
     s = await client.post("/messages/send", json={
         "agent_id": agents["planner"]["id"],

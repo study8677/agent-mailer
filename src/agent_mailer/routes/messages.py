@@ -149,3 +149,15 @@ async def mark_read(message_id: str, request: Request):
     if not row:
         raise HTTPException(status_code=404, detail="Message not found")
     return _row_to_response(row)
+
+
+@router.patch("/messages/{message_id}/unread", response_model=MessageResponse)
+async def mark_unread(message_id: str, request: Request):
+    db = request.app.state.db
+    await db.execute("UPDATE messages SET is_read = 0 WHERE id = ?", (message_id,))
+    await db.commit()
+    cursor = await db.execute("SELECT * FROM messages WHERE id = ?", (message_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Message not found")
+    return _row_to_response(row)
