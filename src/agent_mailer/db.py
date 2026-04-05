@@ -74,9 +74,20 @@ async def get_db(db_path: str = DB_PATH) -> aiosqlite.Connection:
     return db
 
 
+async def _add_column_if_missing(
+    db: aiosqlite.Connection, table: str, column: str, col_def: str
+):
+    """Additive migration helper — silently skips if column already exists."""
+    try:
+        await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+    except Exception:
+        pass
+
+
 async def init_db(db: aiosqlite.Connection):
     await db.executescript(SCHEMA)
     await db.executescript(ARCHIVED_THREADS_SCHEMA)
     await db.executescript(TRASHED_THREADS_SCHEMA)
     await db.executescript(TRASHED_MESSAGES_SCHEMA)
+    await _add_column_if_missing(db, "agents", "tags", "TEXT NOT NULL DEFAULT '[]'")
     await db.commit()

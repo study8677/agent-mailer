@@ -482,3 +482,86 @@ async def test_ui_returns_html(client):
     assert "Operator Console" in resp.text
     assert "Archive" in resp.text
     assert "Trash" in resp.text
+
+
+# --- Delete Agent ---
+
+async def test_delete_agent(client, agents):
+    agent_id = agents["coder"]["id"]
+    resp = await client.delete(f"/admin/agents/{agent_id}")
+    assert resp.status_code == 200
+    assert resp.json()["agent_id"] == agent_id
+
+    resp = await client.get(f"/agents/{agent_id}")
+    assert resp.status_code == 404
+
+
+async def test_delete_agent_not_found(client):
+    resp = await client.delete("/admin/agents/nonexistent-id")
+    assert resp.status_code == 404
+
+
+async def test_delete_agent_preserves_messages(client, agents):
+    """Deleting an agent should not remove its historical messages."""
+    await client.post("/messages/send", json={
+        "agent_id": agents["planner"]["id"],
+        "from_agent": agents["planner"]["address"],
+        "to_agent": agents["coder"]["address"],
+        "action": "send",
+        "subject": "Task",
+        "body": "Do this",
+    })
+    agent_id = agents["coder"]["id"]
+    resp = await client.delete(f"/admin/agents/{agent_id}")
+    assert resp.status_code == 200
+
+    inbox = await client.get(
+        f"/admin/messages/inbox/{agents['coder']['address']}"
+    )
+    assert inbox.status_code == 200
+    assert len(inbox.json()) == 1
+
+
+# --- Agent Tags ---
+
+async def test_update_agent_tags(client, agents):
+    agent_id = agents["coder"]["id"]
+    resp = await client.put(
+        f"/admin/agents/{agent_id}/tags",
+        json={"tags": ["frontend", "python"]},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["tags"] == ["frontend", "python"]
+
+    agent = await client.get(f"/agents/{agent_id}")
+    assert agent.json()["tags"] == ["frontend", "python"]
+
+
+async def test_update_agent_tags_not_found(client):
+    resp = await client.put(
+        "/admin/agents/nonexistent-id/tags",
+        json={"tags": ["test"]},
+    )
+    assert resp.status_code == 404
+
+
+async def test_agent_stats_include_tags(client, agents):
+    agent_id = agents["planner"]["id"]
+    await client.put(
+        f"/admin/agents/{agent_id}/tags",
+        json={"tags": ["lead", "planning"]},
+    )
+    resp = await client.get("/admin/agents/stats")
+    assert resp.status_code == 200
+    stats = resp.json()
+    planner_stat = next(s for s in stats if s["agent_id"] == agent_id)
+    assert planner_stat["tags"] == ["lead", "planning"]
+
+
+async def test_register_agent_has_empty_tags(client):
+    resp = await client.post("/agents/register", json={
+        "name": "tagger", "role": "test",
+        "system_prompt": "test prompt",
+    })
+    assert resp.status_code == 200
+    assert resp.json()["tags"] == []

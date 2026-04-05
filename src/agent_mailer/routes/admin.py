@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from agent_mailer.models import (
     AdminSendRequest,
     AgentStats,
+    AgentUpdateTagsRequest,
     MessageResponse,
     ThreadArchiveStatus,
     ThreadOperatorStatus,
@@ -87,6 +88,7 @@ async def agents_stats(request: Request):
             a.name,
             a.address,
             a.role,
+            a.tags,
             COALESCE(recv.total, 0) AS messages_received,
             COALESCE(recv.read_count, 0) AS messages_read,
             COALESCE(recv.total, 0) - COALESCE(recv.read_count, 0) AS messages_unread,
@@ -110,7 +112,39 @@ async def agents_stats(request: Request):
         ORDER BY a.created_at
     """)
     rows = await cursor.fetchall()
-    return [AgentStats(**dict(row)) for row in rows]
+    result = []
+    for row in rows:
+        d = dict(row)
+        raw = d.pop("tags", "[]")
+        d["tags"] = json.loads(raw) if isinstance(raw, str) else raw
+        result.append(AgentStats(**d))
+    return result
+
+
+@router.put("/agents/{agent_id}/tags")
+async def update_agent_tags(agent_id: str, req: AgentUpdateTagsRequest, request: Request):
+    db = request.app.state.db
+    cursor = await db.execute("SELECT id FROM agents WHERE id = ?", (agent_id,))
+    if not await cursor.fetchone():
+        raise HTTPException(status_code=404, detail="Agent not found")
+    await db.execute(
+        "UPDATE agents SET tags = ? WHERE id = ?",
+        (json.dumps(req.tags, ensure_ascii=False), agent_id),
+    )
+    await db.commit()
+    return {"agent_id": agent_id, "tags": req.tags}
+
+
+@router.delete("/agents/{agent_id}")
+async def delete_agent(agent_id: str, request: Request):
+    db = request.app.state.db
+    cursor = await db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Agent not found")
+    await db.execute("DELETE FROM agents WHERE id = ?", (agent_id,))
+    await db.commit()
+    return {"detail": "Agent deleted", "agent_id": agent_id}
 
 
 def _threads_summary_sql(*, archived: bool, trashed: bool) -> str:

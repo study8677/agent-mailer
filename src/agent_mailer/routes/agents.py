@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request
@@ -5,6 +6,14 @@ from agent_mailer.models import AgentRegisterRequest, AgentResponse, AgentSetupR
 from agent_mailer.utils import get_base_url
 
 router = APIRouter()
+
+
+def _parse_agent(row) -> dict:
+    """Convert a DB row to a dict with tags parsed from JSON string to list."""
+    d = dict(row)
+    raw = d.get("tags", "[]")
+    d["tags"] = json.loads(raw) if isinstance(raw, str) else raw
+    return d
 
 
 @router.post("/agents/register", response_model=AgentResponse)
@@ -20,13 +29,13 @@ async def register_agent(req: AgentRegisterRequest, request: Request):
         raise HTTPException(status_code=409, detail=f"Address '{address}' is already taken")
 
     await db.execute(
-        "INSERT INTO agents (id, name, address, role, description, system_prompt, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (agent_id, req.name, address, req.role, req.description, req.system_prompt, now),
+        "INSERT INTO agents (id, name, address, role, description, system_prompt, tags, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (agent_id, req.name, address, req.role, req.description, req.system_prompt, "[]", now),
     )
     await db.commit()
     return AgentResponse(
         id=agent_id, name=req.name, address=address, role=req.role,
-        description=req.description, system_prompt=req.system_prompt, created_at=now,
+        description=req.description, system_prompt=req.system_prompt, tags=[], created_at=now,
     )
 
 
@@ -54,7 +63,7 @@ async def update_address(agent_id: str, req: AgentUpdateAddressRequest, request:
 
     await db.commit()
 
-    agent = dict(row)
+    agent = _parse_agent(row)
     agent["address"] = req.address
     return AgentResponse(**{k: agent[k] for k in AgentResponse.model_fields})
 
@@ -64,7 +73,7 @@ async def list_agents(request: Request):
     db = request.app.state.db
     cursor = await db.execute("SELECT * FROM agents ORDER BY created_at")
     rows = await cursor.fetchall()
-    return [AgentResponse(**dict(row)) for row in rows]
+    return [AgentResponse(**_parse_agent(row)) for row in rows]
 
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse)
@@ -74,7 +83,7 @@ async def get_agent(agent_id: str, request: Request):
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Agent not found")
-    return AgentResponse(**dict(row))
+    return AgentResponse(**_parse_agent(row))
 
 
 @router.get("/agents/{agent_id}/setup", response_model=AgentSetupResponse)

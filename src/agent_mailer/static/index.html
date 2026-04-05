@@ -45,7 +45,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .sidebar-toolbar label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); }
 #sidebarModeSelect { width: 100%; background: var(--sidebar-hover); color: var(--sidebar-text); border: 1px solid #45475a; border-radius: 6px; padding: 6px 8px; font-size: 12px; cursor: pointer; }
 #sidebarModeSelect:focus { outline: 1px solid var(--primary); outline-offset: 1px; }
-.agent-list { flex: 1; overflow-y: auto; }
+.agent-list { flex: 1; overflow-y: auto; padding-bottom: 180px; }
 .agent-item { padding: 10px 16px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; border-left: 3px solid transparent; transition: background 0.15s; }
 .agent-item:hover { background: var(--sidebar-hover); }
 .agent-item.active { background: var(--sidebar-active); border-left-color: var(--primary); }
@@ -77,7 +77,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 }
 .trash-split-title:first-child { border-top: none; padding-top: 6px; }
 
-.nav-buttons { padding: 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #333; }
+.nav-buttons { position: fixed; bottom: 0; left: 0; width: 280px; padding: 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid #333; background: var(--sidebar-bg); z-index: 10; }
 .nav-btn { padding: 10px 16px; background: none; border: none; color: var(--sidebar-text); cursor: pointer; text-align: left; font-size: 14px; border-radius: 6px; transition: background 0.15s; }
 .nav-btn:hover { background: var(--sidebar-hover); }
 .nav-btn.active { background: var(--primary); color: #fff; }
@@ -188,12 +188,107 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 /* Empty state */
 .empty { text-align: center; padding: 40px; color: var(--muted); font-size: 14px; }
+
+/* Tag editor */
+.tag-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; margin-bottom: 8px; }
+.tag-pill { display: inline-flex; align-items: center; gap: 4px; background: var(--primary-light); color: var(--primary); font-size: 12px; font-weight: 500; padding: 3px 8px 3px 10px; border-radius: 12px; white-space: nowrap; }
+.tag-pill .tag-remove { background: none; border: none; color: var(--primary); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 50%; opacity: 0.6; transition: opacity 0.15s; }
+.tag-pill .tag-remove:hover { opacity: 1; }
+.tag-input { border: 1px dashed var(--border); border-radius: 12px; padding: 3px 10px; font-size: 12px; font-family: inherit; outline: none; min-width: 80px; width: 100px; background: transparent; color: var(--text); }
+.tag-input:focus { border-color: var(--primary); border-style: solid; }
+.tag-input::placeholder { color: var(--muted); }
+/* Sidebar mini tags */
+.sidebar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+.sidebar-tag { font-size: 10px; background: rgba(124,58,237,0.15); color: #a78bfa; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
+
+/* Agent delete button */
+.agent-delete-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 4px; opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s; line-height: 1; }
+.agent-item:hover .agent-delete-btn { opacity: 1; }
+.agent-delete-btn:hover { color: var(--danger); background: rgba(239,68,68,0.1); }
+
+/* Confirm modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+.modal-overlay.visible { display: flex; }
+.modal-box { background: #fff; border-radius: 12px; padding: 28px 24px 20px; max-width: 380px; width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.25); animation: modalIn 0.18s ease; }
+@keyframes modalIn { from { opacity: 0; transform: scale(0.92) translateY(8px); } to { opacity: 1; transform: none; } }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.modal-body { font-size: 14px; color: var(--muted); line-height: 1.5; margin-bottom: 20px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-cancel { padding: 8px 18px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); cursor: pointer; font-size: 14px; font-weight: 500; }
+.modal-cancel:hover { background: #f3f4f6; }
+.modal-confirm { padding: 8px 18px; border: none; border-radius: 6px; background: var(--danger); color: #fff; cursor: pointer; font-size: 14px; font-weight: 500; }
+.modal-confirm:hover { background: #dc2626; }
+
+/* Hamburger button (hidden on desktop) */
+.hamburger { display: none; background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+
+/* Sidebar overlay backdrop (mobile only) */
+.sidebar-backdrop { display: none; }
+
+/* ===== Mobile ===== */
+@media (max-width: 768px) {
+  .hamburger { display: block; }
+  .layout { position: relative; }
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: 85vw; max-width: 340px;
+    height: 100vh; height: 100dvh;
+    z-index: 200;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 199;
+  }
+  .sidebar-backdrop.visible { display: block; }
+  .main { padding: 16px 12px; }
+  .header { padding: 10px 14px; }
+  .header h1 { font-size: 15px; }
+  .nav-buttons {
+    width: auto; right: 0;
+    flex-direction: row;
+    justify-content: space-around;
+    padding: 0;
+    z-index: 100;
+    gap: 0;
+  }
+  .nav-btn { flex: 1; text-align: center; font-size: 12px; padding: 12px 4px; border-radius: 0; }
+  .main { padding-bottom: 64px; }
+  .agent-list { padding-bottom: 0; }
+  .agent-delete-btn { opacity: 0.6; font-size: 20px; padding: 6px 10px; }
+  .msg-item { padding: 14px 12px; }
+  .msg-header { flex-wrap: wrap; gap: 4px; }
+  .msg-from { font-size: 14px; }
+  .msg-time { font-size: 12px; }
+  .msg-subject { font-size: 15px; }
+  .msg-preview { font-size: 13px; }
+  .thread-msg { padding: 12px; }
+  .thread-actions { gap: 8px; }
+  .thread-actions .btn { font-size: 13px; padding: 8px 14px; }
+  .stats-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .stats-table { min-width: 600px; }
+  .stats-table th, .stats-table td { padding: 8px 8px; font-size: 12px; white-space: nowrap; }
+  .card { padding: 16px 12px; }
+  .compose-form textarea { min-height: 150px; }
+  .compose-form select,
+  .compose-form input:not([type="radio"]):not([type="checkbox"]),
+  .compose-form textarea { font-size: 16px; }
+}
 </style>
 </head>
 <body>
 
 <div class="header">
-  <h1>Agent Mailer &mdash; Operator Console</h1>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Toggle sidebar">&#9776;</button>
+    <h1>Agent Mailer &mdash; Operator Console</h1>
+  </div>
   <div class="header-right">
     <span class="poll-status" id="pollIndicator" title="Auto-refresh active"></span>
     <label>Refresh:
@@ -209,7 +304,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 </div>
 
 <div class="layout">
-  <div class="sidebar">
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="sidebar" id="sidebar">
     <div class="sidebar-toolbar" id="sidebarToolbar">
       <label for="sidebarModeSelect" id="sidebarModeLabel">Sidebar</label>
       <select id="sidebarModeSelect" title="List by agents or threads">
@@ -218,15 +314,26 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
       </select>
     </div>
     <div class="agent-list" id="agentList"></div>
-    <div class="nav-buttons">
-      <button class="nav-btn" id="navCompose" onclick="showCompose()">Inbox/Compose</button>
-      <button class="nav-btn" id="navStats" onclick="showStats()">Stats</button>
-      <button class="nav-btn" id="navArchive" onclick="showArchive()">Archive</button>
-      <button class="nav-btn" id="navTrash" onclick="showTrash()">Trash</button>
-    </div>
   </div>
   <div class="main" id="main">
     <div class="empty">Select an agent to view inbox, or click Inbox/Compose / Stats.</div>
+  </div>
+</div>
+<div class="nav-buttons" id="navButtons">
+  <button class="nav-btn" id="navCompose" onclick="showCompose()">Inbox/Compose</button>
+  <button class="nav-btn" id="navStats" onclick="showStats()">Stats</button>
+  <button class="nav-btn" id="navArchive" onclick="showArchive()">Archive</button>
+  <button class="nav-btn" id="navTrash" onclick="showTrash()">Trash</button>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box">
+    <div class="modal-title" id="confirmTitle"></div>
+    <div class="modal-body" id="confirmBody"></div>
+    <div class="modal-actions">
+      <button class="modal-cancel" id="confirmCancel">取消</button>
+      <button class="modal-confirm" id="confirmOk">确认</button>
+    </div>
   </div>
 </div>
 
@@ -247,6 +354,7 @@ let expandedMsg = null;
 let pollTimer = null;
 let pollInterval = 5000;
 let msgCache = {}; // id -> message object
+let tagEditingActive = false;
 
 // --- API helpers ---
 async function api(path, opts) {
@@ -398,16 +506,24 @@ async function refreshSidebar() {
 
   await fetchStats();
   const activeAddr = currentView?.type === 'inbox' ? currentView.address : null;
-  list.innerHTML = statsData.map(a => `
+  list.innerHTML = statsData.map(a => {
+    const tagsHtml = (a.tags || []).length > 0
+      ? `<div class="sidebar-tags">${a.tags.map(t => `<span class="sidebar-tag">${esc(t)}</span>`).join('')}</div>`
+      : '';
+    return `
     <div class="agent-item ${a.address === activeAddr ? 'active' : ''}"
-         onclick='showInbox(${JSON.stringify(a.address)})'>
+         onclick='showInbox(${JSON.stringify(a.address)}, ${JSON.stringify(a.agent_id)})'>
       <div class="agent-info">
         <div class="agent-name">${esc(a.name)}</div>
         <div class="agent-role">${esc(a.role)} &middot; ${esc(a.address)}</div>
+        ${tagsHtml}
       </div>
-      <span class="badge ${a.messages_unread === 0 ? 'zero' : ''}">${a.messages_unread}</span>
-    </div>
-  `).join('');
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="badge ${a.messages_unread === 0 ? 'zero' : ''}">${a.messages_unread}</span>
+        <button class="agent-delete-btn" onclick="event.stopPropagation(); deleteAgent('${esc(a.agent_id)}', '${esc(a.name)}')" title="Delete agent">&times;</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // --- Views ---
@@ -506,7 +622,7 @@ async function renderTrashedMessageView() {
     }
   };
   document.getElementById('tmPurgeBtn').onclick = async () => {
-    if (!window.confirm('Permanently delete this message? This cannot be undone.')) return;
+    if (!await showConfirm('永久删除消息', '确定要永久删除这条消息吗？此操作不可撤销。', '删除')) return;
     try {
       await api(`/admin/messages/${encodeURIComponent(mid)}/purge`, { method: 'POST' });
       currentView = { type: 'trash' };
@@ -536,34 +652,61 @@ async function trashSingleMessage(messageId, opts = {}) {
   }
 }
 
-async function showInbox(address) {
+async function showInbox(address, agentId) {
   clearNav();
   setSidebarSpecialMode('none');
-  currentView = { type: 'inbox', address };
+  currentView = { type: 'inbox', address, agentId: agentId || null };
   await refreshSidebar();
   await renderInbox();
+}
+
+function renderTagEditor(agentId, tags) {
+  if (!agentId) return '';
+  const pills = tags.map((t, i) =>
+    `<span class="tag-pill">${esc(t)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
+  ).join('');
+  return `<div class="tag-editor" id="tagEditor">${pills}<input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}"></div>`;
 }
 
 async function renderInbox() {
   if (currentView?.type !== 'inbox') return;
   const address = currentView.address;
+  const agentId = currentView.agentId;
   const msgs = await fetchInbox(address);
   const main = document.getElementById('main');
 
-  if (msgs.length === 0) {
-    main.innerHTML = `<div class="card"><h2>Inbox: ${esc(address)}</h2><div class="empty">No messages.</div></div>`;
+  msgs.forEach(m => { msgCache[m.id] = m; });
+
+  const existingList = main.querySelector('.msg-list');
+  if (existingList) {
+    existingList.innerHTML = msgs.length === 0
+      ? ''
+      : msgs.map(m => renderMsgItem(m)).join('');
+    const emptyEl = main.querySelector('.inbox-empty');
+    if (msgs.length === 0 && !emptyEl) {
+      existingList.insertAdjacentHTML('afterend', '<div class="empty inbox-empty">No messages.</div>');
+    } else if (msgs.length > 0 && emptyEl) {
+      emptyEl.remove();
+    }
+    hydrateMarkdownBodies(main);
     return;
   }
 
-  msgs.forEach(m => msgCache[m.id] = m);
+  const agentData = agentId ? statsData.find(a => a.agent_id === agentId) : null;
+  const currentTags = agentData ? (agentData.tags || []) : [];
+  const tagEditorHtml = renderTagEditor(agentId, currentTags);
+
   main.innerHTML = `
     <div class="card">
       <h2>Inbox: ${esc(address)}</h2>
+      ${tagEditorHtml}
       <ul class="msg-list">
         ${msgs.map(m => renderMsgItem(m)).join('')}
       </ul>
+      ${msgs.length === 0 ? '<div class="empty inbox-empty">No messages.</div>' : ''}
     </div>`;
   hydrateMarkdownBodies(main);
+  hydrateTagInput();
 }
 
 function renderMsgItem(m) {
@@ -796,7 +939,7 @@ async function renderThreadView() {
   const purgeBtn = document.getElementById('purgeThreadBtn');
   if (purgeBtn) {
     purgeBtn.onclick = async () => {
-      if (!window.confirm('Permanently delete this thread and all messages? This cannot be undone.')) return;
+      if (!await showConfirm('永久删除线程', '确定要永久删除这个线程及其所有消息吗？此操作不可撤销。', '删除')) return;
       try {
         await api(`/admin/threads/${encodeURIComponent(threadId)}/purge`, { method: 'POST' });
         currentView = { type: 'trash' };
@@ -997,6 +1140,7 @@ async function renderStats() {
   main.innerHTML = `
     <div class="card">
       <h2>Agent Statistics</h2>
+      <div class="stats-table-wrap">
       <table class="stats-table">
         <thead>
           <tr>
@@ -1021,13 +1165,14 @@ async function renderStats() {
           `).join('')}
         </tbody>
       </table>
+      </div>
     </div>`;
 }
 
 // --- Polling ---
 function startPolling() {
   stopPolling();
-  if (pollInterval === 0) return;
+  if (pollInterval === 0 || tagEditingActive) return;
   pollTimer = setInterval(async () => {
     await refreshSidebar();
     if (currentView?.type === 'inbox') await renderInbox();
@@ -1107,6 +1252,159 @@ function fmtTime(iso) {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' +
          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
+
+// --- Confirm modal ---
+function showConfirm(title, body, confirmLabel) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('confirmModal');
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmBody').textContent = body;
+    const okBtn = document.getElementById('confirmOk');
+    okBtn.textContent = confirmLabel || '确认';
+    overlay.classList.add('visible');
+
+    function cleanup(result) {
+      overlay.classList.remove('visible');
+      okBtn.removeEventListener('click', onOk);
+      document.getElementById('confirmCancel').removeEventListener('click', onCancel);
+      overlay.removeEventListener('click', onBackdrop);
+      resolve(result);
+    }
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    function onBackdrop(e) { if (e.target === overlay) cleanup(false); }
+
+    okBtn.addEventListener('click', onOk);
+    document.getElementById('confirmCancel').addEventListener('click', onCancel);
+    overlay.addEventListener('click', onBackdrop);
+  });
+}
+
+// --- Delete agent ---
+async function deleteAgent(agentId, agentName) {
+  const ok = await showConfirm(
+    '删除 Agent',
+    `确定要删除 Agent "${agentName}" 吗？此操作不可撤销。`,
+    '删除',
+  );
+  if (!ok) return;
+  try {
+    await api(`/admin/agents/${encodeURIComponent(agentId)}`, { method: 'DELETE' });
+    if (currentView?.type === 'inbox') {
+      currentView = null;
+      document.getElementById('main').innerHTML =
+        '<div class="empty">Agent has been deleted.</div>';
+    }
+    await refreshSidebar();
+  } catch (e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+// --- Tag editor ---
+function refreshTagEditor() {
+  const editor = document.getElementById('tagEditor');
+  if (!editor) return;
+  const agentId = currentView?.agentId;
+  if (!agentId) return;
+  const entry = statsData.find(a => a.agent_id === agentId);
+  const tags = entry ? (entry.tags || []) : [];
+  const pills = tags.map((t, i) =>
+    `<span class="tag-pill">${esc(t)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
+  ).join('');
+  const inputVal = document.getElementById('tagInput')?.value || '';
+  editor.innerHTML = `${pills}<input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}">`;
+  const newInput = document.getElementById('tagInput');
+  if (newInput) {
+    newInput.value = inputVal;
+    hydrateTagInput();
+  }
+}
+
+async function updateAgentTags(agentId, tags) {
+  await api(`/admin/agents/${encodeURIComponent(agentId)}/tags`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tags }),
+  });
+  const entry = statsData.find(a => a.agent_id === agentId);
+  if (entry) entry.tags = tags;
+  await refreshSidebar();
+}
+
+async function removeTag(idx) {
+  const agentId = currentView?.agentId;
+  if (!agentId) return;
+  const entry = statsData.find(a => a.agent_id === agentId);
+  if (!entry) return;
+  const tags = [...(entry.tags || [])];
+  tags.splice(idx, 1);
+  await updateAgentTags(agentId, tags);
+  refreshTagEditor();
+}
+
+function hydrateTagInput() {
+  const input = document.getElementById('tagInput');
+  if (!input) return;
+  input.addEventListener('focus', () => {
+    tagEditingActive = true;
+    stopPolling();
+  });
+  input.addEventListener('blur', () => {
+    tagEditingActive = false;
+    startPolling();
+  });
+  input.addEventListener('keydown', async (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const val = input.value.trim();
+    if (!val) return;
+    const agentId = currentView?.agentId;
+    if (!agentId) return;
+    const entry = statsData.find(a => a.agent_id === agentId);
+    if (!entry) return;
+    const tags = [...(entry.tags || [])];
+    if (!tags.includes(val)) {
+      tags.push(val);
+      await updateAgentTags(agentId, tags);
+    }
+    input.value = '';
+    refreshTagEditor();
+  });
+}
+
+// --- Mobile sidebar drawer ---
+const _sidebar = document.getElementById('sidebar');
+const _backdrop = document.getElementById('sidebarBackdrop');
+const _hamburger = document.getElementById('hamburgerBtn');
+
+function isMobile() { return window.matchMedia('(max-width: 768px)').matches; }
+
+function openSidebar() {
+  _sidebar.classList.add('open');
+  _backdrop.classList.add('visible');
+}
+
+function closeSidebar() {
+  _sidebar.classList.remove('open');
+  _backdrop.classList.remove('visible');
+}
+
+_hamburger.addEventListener('click', () => {
+  _sidebar.classList.contains('open') ? closeSidebar() : openSidebar();
+});
+
+_backdrop.addEventListener('click', closeSidebar);
+
+_sidebar.addEventListener('click', (e) => {
+  if (isMobile() && e.target.closest('.agent-item')) {
+    closeSidebar();
+  }
+});
+
+document.getElementById('navButtons').addEventListener('click', () => {
+  if (isMobile()) closeSidebar();
+});
 
 // --- Init ---
 (async () => {

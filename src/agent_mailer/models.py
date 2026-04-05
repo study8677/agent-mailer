@@ -28,11 +28,16 @@ class AgentResponse(BaseModel):
     role: str
     description: str
     system_prompt: str
+    tags: list[str] = []
     created_at: str
 
 
 class AgentUpdateAddressRequest(BaseModel):
     address: str
+
+
+class AgentUpdateTagsRequest(BaseModel):
+    tags: list[str]
 
 
 class AgentSetupResponse(BaseModel):
@@ -83,6 +88,7 @@ class AgentStats(BaseModel):
     name: str
     address: str
     role: str
+    tags: list[str] = []
     messages_received: int = 0
     messages_read: int = 0
     messages_unread: int = 0
