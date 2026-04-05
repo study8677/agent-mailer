@@ -197,6 +197,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .tag-input { border: 1px dashed var(--border); border-radius: 12px; padding: 3px 10px; font-size: 12px; font-family: inherit; outline: none; min-width: 80px; width: 100px; background: transparent; color: var(--text); }
 .tag-input:focus { border-color: var(--primary); border-style: solid; }
 .tag-input::placeholder { color: var(--muted); }
+/* Tag autocomplete */
+.tag-input-wrap { position: relative; display: inline-flex; }
+.tag-autocomplete { position: absolute; top: 100%; left: 0; min-width: 180px; max-height: 180px; overflow-y: auto; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); z-index: 50; margin-top: 4px; display: none; }
+.tag-autocomplete.visible { display: block; }
+.tag-ac-item { padding: 6px 12px; font-size: 12px; cursor: pointer; transition: background 0.1s; }
+.tag-ac-item:hover, .tag-ac-item.active { background: var(--primary-light); color: var(--primary); }
+.tag-ac-item strong { font-weight: 700; }
 /* Sidebar mini tags */
 .sidebar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .sidebar-tag { font-size: 10px; background: rgba(124,58,237,0.15); color: #a78bfa; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
@@ -355,6 +362,7 @@ let pollTimer = null;
 let pollInterval = 5000;
 let msgCache = {}; // id -> message object
 let tagEditingActive = false;
+let acIndex = -1;
 
 // --- API helpers ---
 async function api(path, opts) {
@@ -656,6 +664,7 @@ async function showInbox(address, agentId) {
   clearNav();
   setSidebarSpecialMode('none');
   currentView = { type: 'inbox', address, agentId: agentId || null };
+  document.getElementById('main').innerHTML = '';
   await refreshSidebar();
   await renderInbox();
 }
@@ -665,7 +674,7 @@ function renderTagEditor(agentId, tags) {
   const pills = tags.map((t, i) =>
     `<span class="tag-pill">${esc(t)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
   ).join('');
-  return `<div class="tag-editor" id="tagEditor">${pills}<input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}"></div>`;
+  return `<div class="tag-editor" id="tagEditor">${pills}<div class="tag-input-wrap"><input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}" autocomplete="off"><div class="tag-autocomplete" id="tagAutocomplete"></div></div></div>`;
 }
 
 async function renderInbox() {
@@ -1313,7 +1322,7 @@ function refreshTagEditor() {
     `<span class="tag-pill">${esc(t)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
   ).join('');
   const inputVal = document.getElementById('tagInput')?.value || '';
-  editor.innerHTML = `${pills}<input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}">`;
+  editor.innerHTML = `${pills}<div class="tag-input-wrap"><input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}" autocomplete="off"><div class="tag-autocomplete" id="tagAutocomplete"></div></div>`;
   const newInput = document.getElementById('tagInput');
   if (newInput) {
     newInput.value = inputVal;
@@ -1343,21 +1352,115 @@ async function removeTag(idx) {
   refreshTagEditor();
 }
 
+function getAllTags() {
+  const s = new Set();
+  statsData.forEach(a => (a.tags || []).forEach(t => s.add(t)));
+  return [...s].sort();
+}
+
+function updateAutocomplete() {
+  const input = document.getElementById('tagInput');
+  const ac = document.getElementById('tagAutocomplete');
+  if (!input || !ac) return;
+  const val = input.value.trim().toLowerCase();
+  const agentId = currentView?.agentId;
+  const cur = agentId ? statsData.find(a => a.agent_id === agentId) : null;
+  const curTags = cur ? (cur.tags || []) : [];
+  const candidates = getAllTags().filter(t => !curTags.includes(t));
+  const filtered = val ? candidates.filter(t => t.toLowerCase().includes(val)) : candidates;
+  if (filtered.length === 0) { ac.classList.remove('visible'); ac.innerHTML = ''; return; }
+  ac.innerHTML = filtered.map((t, i) =>
+    `<div class="tag-ac-item${i === acIndex ? ' active' : ''}" data-tag="${esc(t)}">${acHighlight(t, val)}</div>`
+  ).join('');
+  ac.classList.add('visible');
+}
+
+function acHighlight(tag, q) {
+  if (!q) return esc(tag);
+  const idx = tag.toLowerCase().indexOf(q);
+  if (idx < 0) return esc(tag);
+  return esc(tag.substring(0, idx)) + '<strong>' + esc(tag.substring(idx, idx + q.length)) + '</strong>' + esc(tag.substring(idx + q.length));
+}
+
+function acHighlightItems(items) {
+  items.forEach((it, i) => it.classList.toggle('active', i === acIndex));
+  if (acIndex >= 0 && items[acIndex]) items[acIndex].scrollIntoView({ block: 'nearest' });
+}
+
+function hideAutocomplete() {
+  const ac = document.getElementById('tagAutocomplete');
+  if (ac) { ac.classList.remove('visible'); ac.innerHTML = ''; }
+  acIndex = -1;
+}
+
+async function selectAutocompleteTag(tagValue) {
+  const agentId = currentView?.agentId;
+  if (!agentId) return;
+  const entry = statsData.find(a => a.agent_id === agentId);
+  if (!entry) return;
+  const tags = [...(entry.tags || [])];
+  if (!tags.includes(tagValue)) {
+    tags.push(tagValue);
+    await updateAgentTags(agentId, tags);
+  }
+  const input = document.getElementById('tagInput');
+  if (input) input.value = '';
+  acIndex = -1;
+  refreshTagEditor();
+}
+
 function hydrateTagInput() {
   const input = document.getElementById('tagInput');
+  const ac = document.getElementById('tagAutocomplete');
   if (!input) return;
   input.addEventListener('focus', () => {
     tagEditingActive = true;
     stopPolling();
+    acIndex = -1;
+    updateAutocomplete();
   });
   input.addEventListener('blur', () => {
-    tagEditingActive = false;
-    startPolling();
+    setTimeout(() => {
+      hideAutocomplete();
+      tagEditingActive = false;
+      startPolling();
+    }, 150);
   });
+  input.addEventListener('input', () => {
+    acIndex = -1;
+    updateAutocomplete();
+  });
+  if (ac) {
+    ac.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      const item = e.target.closest('.tag-ac-item');
+      if (item) selectAutocompleteTag(item.dataset.tag);
+    });
+  }
   input.addEventListener('keydown', async (e) => {
+    const items = ac ? ac.querySelectorAll('.tag-ac-item') : [];
+    const acVisible = ac && ac.classList.contains('visible');
+    if (e.key === 'ArrowDown' && acVisible) {
+      e.preventDefault();
+      acIndex = Math.min(acIndex + 1, items.length - 1);
+      acHighlightItems(items);
+      return;
+    }
+    if (e.key === 'ArrowUp' && acVisible) {
+      e.preventDefault();
+      acIndex = Math.max(acIndex - 1, -1);
+      acHighlightItems(items);
+      return;
+    }
+    if (e.key === 'Escape') { hideAutocomplete(); return; }
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    const val = input.value.trim();
+    let val;
+    if (acVisible && acIndex >= 0 && items[acIndex]) {
+      val = items[acIndex].dataset.tag;
+    } else {
+      val = input.value.trim();
+    }
     if (!val) return;
     const agentId = currentView?.agentId;
     if (!agentId) return;
@@ -1369,6 +1472,7 @@ function hydrateTagInput() {
       await updateAgentTags(agentId, tags);
     }
     input.value = '';
+    acIndex = -1;
     refreshTagEditor();
   });
 }
