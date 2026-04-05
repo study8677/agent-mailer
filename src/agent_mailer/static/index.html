@@ -207,6 +207,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 /* Sidebar mini tags */
 .sidebar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .sidebar-tag { font-size: 10px; background: rgba(124,58,237,0.15); color: #a78bfa; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
+/* Tag filter bar */
+.sidebar-filter-row { display: flex; align-items: center; gap: 6px; padding: 0 12px; }
+.sidebar-filter-btn { background: none; border: 1px solid #45475a; color: var(--sidebar-text); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s; display: flex; align-items: center; gap: 4px; }
+.sidebar-filter-btn:hover { background: var(--sidebar-hover); }
+.sidebar-filter-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(124,58,237,0.1); }
+.sidebar-filter-btn .filter-icon { font-size: 13px; }
+.sidebar-filter-bar { display: none; flex-wrap: wrap; gap: 5px; padding: 6px 12px 2px; }
+.sidebar-filter-bar.visible { display: flex; }
+.filter-tag { font-size: 11px; padding: 3px 10px; border-radius: 12px; cursor: pointer; border: 1px solid #45475a; background: transparent; color: var(--sidebar-text); transition: all 0.15s; white-space: nowrap; }
+.filter-tag:hover { border-color: #a78bfa; color: #a78bfa; }
+.filter-tag.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
+.filter-clear { font-size: 10px; color: var(--muted); cursor: pointer; padding: 3px 6px; border: none; background: none; text-decoration: underline; }
+.filter-clear:hover { color: var(--sidebar-text); }
 
 /* Agent delete button */
 .agent-delete-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 4px; opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s; line-height: 1; }
@@ -320,6 +333,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
         <option value="threads">By Threads</option>
       </select>
     </div>
+    <div class="sidebar-filter-row" id="filterRow">
+      <button class="sidebar-filter-btn" id="filterToggleBtn" onclick="toggleFilterBar()">
+        <span class="filter-icon">▸</span> 标签过滤
+      </button>
+    </div>
+    <div class="sidebar-filter-bar" id="filterBar"></div>
     <div class="agent-list" id="agentList"></div>
   </div>
   <div class="main" id="main">
@@ -363,6 +382,8 @@ let pollInterval = 5000;
 let msgCache = {}; // id -> message object
 let tagEditingActive = false;
 let acIndex = -1;
+let filterTags = new Set();
+let filterBarOpen = false;
 
 // --- API helpers ---
 async function api(path, opts) {
@@ -419,6 +440,7 @@ function setSidebarSpecialMode(mode) {
     sel.disabled = true;
     lab.textContent = mode === 'archive' ? 'Archive' : 'Trash';
   }
+  updateFilterVisibility();
 }
 
 // --- Sidebar ---
@@ -494,6 +516,7 @@ async function refreshSidebar() {
   }
 
   if (sidebarMode === 'threads') {
+    updateFilterVisibility();
     await fetchThreadsSummary({});
     const activeTid = currentView?.type === 'thread' ? currentView.threadId : null;
     list.innerHTML = threadsData.length === 0
@@ -513,8 +536,14 @@ async function refreshSidebar() {
   }
 
   await fetchStats();
+  updateFilterVisibility();
   const activeAddr = currentView?.type === 'inbox' ? currentView.address : null;
-  list.innerHTML = statsData.map(a => {
+  const filteredStats = filterTags.size > 0
+    ? statsData.filter(a => a.address === HUMAN_OPERATOR_ADDRESS || (a.tags || []).some(t => filterTags.has(t)))
+    : statsData;
+  list.innerHTML = filteredStats.length === 0 && filterTags.size > 0
+    ? '<div class="empty" style="padding:20px 16px;font-size:12px">没有匹配的 Agent</div>'
+    : filteredStats.map(a => {
     const tagsHtml = (a.tags || []).length > 0
       ? `<div class="sidebar-tags">${a.tags.map(t => `<span class="sidebar-tag">${esc(t)}</span>`).join('')}</div>`
       : '';
@@ -1197,6 +1226,10 @@ function stopPolling() {
 
 document.getElementById('sidebarModeSelect').addEventListener('change', async (e) => {
   sidebarMode = e.target.value;
+  filterTags.clear();
+  filterBarOpen = false;
+  document.getElementById('filterToggleBtn')?.classList.remove('active');
+  document.getElementById('filterBar')?.classList.remove('visible');
   clearNav();
   setSidebarSpecialMode('none');
   currentView = null;
@@ -1475,6 +1508,72 @@ function hydrateTagInput() {
     acIndex = -1;
     refreshTagEditor();
   });
+}
+
+// --- Tag filter ---
+function toggleFilterBar() {
+  filterBarOpen = !filterBarOpen;
+  const bar = document.getElementById('filterBar');
+  if (filterBarOpen) {
+    bar.classList.add('visible');
+    renderFilterBar();
+  } else {
+    bar.classList.remove('visible');
+  }
+  updateFilterBtn();
+}
+
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  if (!bar) return;
+  const allTags = getAllTags();
+  if (allTags.length === 0) {
+    bar.innerHTML = '<span style="font-size:11px;color:var(--muted);padding:2px 0">暂无标签</span>';
+    return;
+  }
+  const pills = allTags.map(t =>
+    `<button class="filter-tag${filterTags.has(t) ? ' selected' : ''}" data-tag="${esc(t)}" onclick="toggleFilterTag(this.dataset.tag)">${esc(t)}</button>`
+  ).join('');
+  const clearBtn = filterTags.size > 0
+    ? '<button class="filter-clear" onclick="clearFilterTags()">清除</button>'
+    : '';
+  bar.innerHTML = pills + clearBtn;
+}
+
+function toggleFilterTag(tag) {
+  if (filterTags.has(tag)) filterTags.delete(tag);
+  else filterTags.add(tag);
+  renderFilterBar();
+  updateFilterBtn();
+  refreshSidebar();
+}
+
+function clearFilterTags() {
+  filterTags.clear();
+  renderFilterBar();
+  updateFilterBtn();
+  refreshSidebar();
+}
+
+function updateFilterBtn() {
+  const btn = document.getElementById('filterToggleBtn');
+  if (!btn) return;
+  const n = filterTags.size;
+  const chevron = filterBarOpen ? '▾' : '▸';
+  btn.className = 'sidebar-filter-btn' + (n > 0 ? ' active' : '');
+  btn.innerHTML = `<span class="filter-icon">${chevron}</span> 标签过滤${n > 0 ? ` (${n})` : ''}`;
+}
+
+function updateFilterVisibility() {
+  const row = document.getElementById('filterRow');
+  const bar = document.getElementById('filterBar');
+  if (sidebarMode === 'agents' && !document.getElementById('sidebarModeSelect').disabled) {
+    row.style.display = '';
+    if (filterBarOpen) { bar.classList.add('visible'); renderFilterBar(); }
+  } else {
+    row.style.display = 'none';
+    bar.classList.remove('visible');
+  }
 }
 
 // --- Mobile sidebar drawer ---
