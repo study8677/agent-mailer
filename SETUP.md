@@ -70,37 +70,66 @@ curl http://localhost:8000/agents/{agent_id}/setup
 ```
 
 返回内容包含：
-- `agent_md` — AGENT.md 的完整内容（身份、协议、API 地址）
-- `claude_md` — CLAUDE.md 模板（适用于 Claude Code）
+- `agent_md` — AGENT.md 的完整内容（身份、协议、API 地址），所有 Agent 类型通用的身份文件
+- `claude_md` — CLAUDE.md 模板（Claude Code 的适配文件示例）
 - `instructions` — 配置步骤说明
+
+> **注意**：`agent_md` 是通用身份文件。不同 Agent 类型需要根据自身加载机制创建对应的适配文件来引用它。详见第三步。
 
 ---
 
 ## 第三步：配置工作目录
 
-### 文件结构
+将 setup 端点返回的身份文件保存到工作目录，并根据 Agent 类型创建对应的适配文件。
 
-```
-~/workspace/coder/          # Coder Agent 的工作目录
-├── AGENT.md                # 身份定义 + 通信协议（所有 Agent 通用）
-├── CLAUDE.md               # Claude Code 专用启动配置（引用 AGENT.md）
-└── ... (项目代码)
-```
+### AGENT.md（通用身份文件）
 
-### AGENT.md
-
-AGENT.md 是 **所有 Agent 通用的身份文件**，包含：
-
-1. **Agent 元信息**：name、role、Agent ID、Broker URL
-2. **身份提示词**（system_prompt）：定义 Agent 的行为和职责
-3. **邮箱协议**：收件、发件、标记已读等 API 说明
+**AGENT.md** 包含 Agent 的身份、system_prompt 和邮箱协议 API。
+它是所有 Agent 类型在启动时加载的通用身份文件。
 
 将 `/agents/{id}/setup` 返回的 `agent_md` 字段内容保存为工作目录下的 `AGENT.md`。
 
-### CLAUDE.md（Claude Code 适配）
+### 适配文件（按 Agent 类型）
 
-Claude Code 启动时会自动加载当前目录下的 `CLAUDE.md`。
-因此需要在 CLAUDE.md 中 **引用 AGENT.md**，让 Claude 自动获取身份：
+不同 Agent 类型使用不同的配置文件来加载身份。适配文件的作用是**引用通用身份文件**，让 Agent 在启动时自动获取身份和通信协议。
+
+| Agent 类型    | 适配文件        | 身份文件引用方式                       |
+|--------------|----------------|--------------------------------------|
+| Claude Code  | `CLAUDE.md`    | `@import AGENT.md`                   |
+| Cursor       | `.cursorrules` | 包含 AGENT.md 引用                    |
+| Dreamfactory | `DREAMER.md`   | 包含 SOUL.md 引用                     |
+| OpenClaw     | `CLAW.md`      | 包含 AGENT.md 引用                    |
+| 自研 Agent    | 启动时读取      | 程序化解析 AGENT.md                   |
+
+### 文件结构示例
+
+**Claude Code：**
+```
+~/workspace/coder/
+├── AGENT.md                # 通用身份文件（所有 Agent 通用）
+├── CLAUDE.md               # Claude Code 适配文件（引用 AGENT.md）
+└── ... (项目代码)
+```
+
+**Dreamfactory：**
+```
+~/workspace/coder/
+├── SOUL.md                 # Dreamfactory 身份文件（内容等同 AGENT.md）
+├── DREAMER.md              # Dreamfactory 适配文件（引用 SOUL.md）
+└── ... (项目代码)
+```
+
+**OpenClaw：**
+```
+~/workspace/coder/
+├── AGENT.md                # 通用身份文件
+├── CLAW.md                 # OpenClaw 适配文件（引用 AGENT.md）
+└── ... (项目代码)
+```
+
+### 适配文件内容示例
+
+**CLAUDE.md（Claude Code）：**
 
 ```markdown
 # CLAUDE.md
@@ -114,28 +143,54 @@ Claude Code 启动时会自动加载当前目录下的 `CLAUDE.md`。
 1. 启动后先通过 Inbox API 检查是否有未读消息
 2. 按照 AGENT.md 中的身份提示词行事
 3. 完成任务后通过 Reply 或 Forward 将结果发送给下一个环节
-4. 所有通信必须经过 Mail Broker，使用你的 Agent ID
+4. 所有通信必须经过 Mail Broker，使用你的邮箱地址
 ```
 
-### 其他 Agent 适配
+**DREAMER.md（Dreamfactory）：**
 
-对于非 Claude Code 的 Agent（如 Cursor、自研 Agent），根据其配置机制：
+```markdown
+# DREAMER.md
 
-| Agent 类型 | 配置方式 |
-|-----------|---------|
-| Claude Code | `CLAUDE.md` 引用 `AGENT.md` |
-| Cursor | `.cursorrules` 引用 `AGENT.md` |
-| 自研 Agent | 启动时读取 `AGENT.md` 解析身份和 API |
+请在启动时加载 SOUL.md 以获取你的身份和通信协议。
+
+@import SOUL.md
+
+## 行为指引
+
+1. 启动后先通过 Inbox API 检查是否有未读消息
+2. 按照 SOUL.md 中的身份提示词行事
+3. 完成任务后通过 Reply 或 Forward 将结果发送给下一个环节
+4. 所有通信必须经过 Mail Broker，使用你的邮箱地址
+```
+
+**CLAW.md（OpenClaw）：**
+
+```markdown
+# CLAW.md
+
+请在启动时加载 AGENT.md 以获取你的身份和通信协议。
+
+@import AGENT.md
+
+## 行为指引
+
+1. 启动后先通过 Inbox API 检查是否有未读消息
+2. 按照 AGENT.md 中的身份提示词行事
+3. 完成任务后通过 Reply 或 Forward 将结果发送给下一个环节
+4. 所有通信必须经过 Mail Broker，使用你的邮箱地址
+```
 
 ---
 
 ## 完整流程示例
 
+### 通用步骤（所有 Agent 类型共用）
+
 ```bash
 # 1. 启动 Broker
 cd agent-mailer && uv run python -m agent_mailer.main
 
-# 2. 注册 Coder Agent
+# 2. 注册 Agent
 CODER_ID=$(curl -s -X POST http://localhost:8000/agents/register \
   -H "Content-Type: application/json" \
   -d '{
@@ -148,14 +203,45 @@ CODER_ID=$(curl -s -X POST http://localhost:8000/agents/register \
 # 3. 获取配置
 SETUP=$(curl -s http://localhost:8000/agents/$CODER_ID/setup)
 
-# 4. 写入工作目录
+# 4. 创建工作目录
 mkdir -p ~/workspace/coder
+```
+
+### 按 Agent 类型写入配置
+
+**Claude Code：**
+```bash
 echo "$SETUP" | jq -r '.agent_md' > ~/workspace/coder/AGENT.md
 echo "$SETUP" | jq -r '.claude_md' > ~/workspace/coder/CLAUDE.md
-
-# 5. 在该目录启动 Claude Code
 cd ~/workspace/coder && claude
-# Claude 自动加载 CLAUDE.md -> 读取 AGENT.md -> 知道自己是 coder，开始查收邮件
+# Claude 自动加载 CLAUDE.md -> 读取 AGENT.md -> 获取身份，开始查收邮件
+```
+
+**Dreamfactory：**
+```bash
+# Dreamfactory 使用 SOUL.md 作为身份文件
+echo "$SETUP" | jq -r '.agent_md' > ~/workspace/coder/SOUL.md
+# 创建 DREAMER.md 适配文件，引用 SOUL.md
+cat > ~/workspace/coder/DREAMER.md << 'EOF'
+# DREAMER.md
+请在启动时加载 SOUL.md 以获取你的身份和通信协议。
+@import SOUL.md
+EOF
+cd ~/workspace/coder && dreamfactory
+# Dreamfactory 加载 DREAMER.md -> 读取 SOUL.md -> 获取身份，开始查收邮件
+```
+
+**OpenClaw：**
+```bash
+echo "$SETUP" | jq -r '.agent_md' > ~/workspace/coder/AGENT.md
+# 创建 CLAW.md 适配文件，引用 AGENT.md
+cat > ~/workspace/coder/CLAW.md << 'EOF'
+# CLAW.md
+请在启动时加载 AGENT.md 以获取你的身份和通信协议。
+@import AGENT.md
+EOF
+cd ~/workspace/coder && openclaw
+# OpenClaw 加载 CLAW.md -> 读取 AGENT.md -> 获取身份，开始查收邮件
 ```
 
 ---
@@ -163,6 +249,8 @@ cd ~/workspace/coder && claude
 ## 设计要点
 
 - **`system_prompt` 是注册时的必填项**：它定义了 Agent 的核心行为，不同的身份提示词让同一个底层 LLM 扮演不同角色
-- **AGENT.md 是通用格式**：不绑定任何特定 Agent 实现，任何能读取 Markdown 的系统都可以解析
-- **CLAUDE.md 是适配层**：针对 Claude Code 的启动机制，通过引用 AGENT.md 实现身份注入
-- **一目录一身份**：不同工作目录对应不同 Agent 身份，同一个 Claude Code 在不同目录下自动切换角色
+- **AGENT.md 是通用身份格式**：不绑定任何特定 Agent 实现，任何能读取 Markdown 的系统都可以解析
+- **适配文件是桥接层**：每种 Agent 类型都有自己的适配文件（CLAUDE.md / DREAMER.md / CLAW.md / .cursorrules），通过引用身份文件实现身份注入
+- **身份文件命名约定**：大多数 Agent 类型使用 `AGENT.md` 作为身份文件；Dreamfactory 使用 `SOUL.md`（内容格式相同，仅文件名不同）
+- **一目录一身份**：不同工作目录对应不同 Agent 身份，同一个 Agent 在不同目录下自动切换角色
+- **Agent 类型无关**：Broker 不感知 Agent 的具体类型，注册和通信协议对所有类型一致
