@@ -757,7 +757,7 @@ async function renderApiKeys(newKeyData) {
   const newKeyHtml = newKeyData ? `
     <div class="apikey-new-box">
       <div class="apikey-warning">&#9888; This key will only be shown once. Copy it now!</div>
-      <div class="apikey-value" id="newKeyValue">${esc(newKeyData.key)}</div>
+      <div class="apikey-value" id="newKeyValue">${esc(newKeyData.raw_key)}</div>
       <button class="btn-sm" onclick="copyNewKey()">Copy</button>
       <span id="newKeyCopyStatus" style="font-size:12px;color:var(--success);margin-left:8px"></span>
     </div>` : '';
