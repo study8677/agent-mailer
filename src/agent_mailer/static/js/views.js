@@ -122,14 +122,25 @@ async function trashSingleMessage(messageId, opts = {}) {
 // --- Inbox view ---
 
 async function showHumanInbox() {
-  if (!HUMAN_OPERATOR_ADDRESS) return;
   clearNav();
   document.getElementById('navInbox').classList.add('active');
   setSidebarSpecialMode('none');
-  currentView = { type: 'inbox', address: HUMAN_OPERATOR_ADDRESS, agentId: HUMAN_OPERATOR_AGENT_ID };
-  document.getElementById('main').innerHTML = '';
-  await refreshSidebar();
-  await renderInbox();
+  // Reset sidebar to By Agents mode
+  sidebarMode = 'agents';
+  const modeSelect = document.getElementById('sidebarModeSelect');
+  if (modeSelect) modeSelect.value = 'agents';
+
+  if (HUMAN_OPERATOR_ADDRESS) {
+    currentView = { type: 'inbox', address: HUMAN_OPERATOR_ADDRESS, agentId: HUMAN_OPERATOR_AGENT_ID };
+    document.getElementById('main').innerHTML = '';
+    await refreshSidebar();
+    await renderInbox();
+  } else {
+    currentView = null;
+    document.getElementById('main').innerHTML =
+      '<div class="empty">Select an agent to view inbox, or click Compose.</div>';
+    await refreshSidebar();
+  }
 }
 
 async function showInbox(address, agentId) {
