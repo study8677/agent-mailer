@@ -109,9 +109,15 @@ async function refreshSidebar() {
   await fetchStats();
   updateFilterVisibility();
   const activeAddr = currentView?.type === 'inbox' ? currentView.address : null;
-  const filteredStats = filterTags.size > 0
+  const filtered = filterTags.size > 0
     ? statsData.filter(a => a.address === HUMAN_OPERATOR_ADDRESS || (a.tags || []).some(t => filterTags.has(t)))
-    : statsData;
+    : [...statsData];
+  // Human Operator always first
+  const filteredStats = filtered.sort((a, b) => {
+    if (a.address === HUMAN_OPERATOR_ADDRESS) return -1;
+    if (b.address === HUMAN_OPERATOR_ADDRESS) return 1;
+    return 0;
+  });
   list.innerHTML = filteredStats.length === 0 && filterTags.size > 0
     ? '<div class="empty" style="padding:20px 16px;font-size:12px">没有匹配的 Agent</div>'
     : filteredStats.map(a => {
