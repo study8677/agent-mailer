@@ -163,6 +163,11 @@ class UpdateFilterTagsRequest(BaseModel):
     filter_tags: list[str]
 
 
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
 class ApiKeyCreateRequest(BaseModel):
     name: str = ""
 

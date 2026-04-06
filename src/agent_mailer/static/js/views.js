@@ -805,6 +805,27 @@ async function renderApiKeys(newKeyData) {
       </div>
       <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Your Keys</h3>
       ${keysTableHtml}
+    </div>
+    <div class="card">
+      <h2>Change Password</h2>
+      <div class="compose-form" style="max-width:400px">
+        <div>
+          <label>Current Password</label>
+          <input type="password" id="currentPassword" placeholder="Enter current password">
+        </div>
+        <div>
+          <label>New Password</label>
+          <input type="password" id="newPassword" placeholder="Enter new password (min 8 chars)">
+        </div>
+        <div>
+          <label>Confirm New Password</label>
+          <input type="password" id="confirmPassword" placeholder="Confirm new password">
+        </div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+          <div id="passwordStatus"></div>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -855,6 +876,46 @@ async function deactivateApiKey(keyId, keyName) {
     await renderApiKeys();
   } catch (e) {
     alert('Failed: ' + e.message);
+  }
+}
+
+async function changePassword() {
+  const status = document.getElementById('passwordStatus');
+  const current = document.getElementById('currentPassword').value;
+  const newPw = document.getElementById('newPassword').value;
+  const confirm = document.getElementById('confirmPassword').value;
+  status.textContent = '';
+  status.className = '';
+
+  if (!current || !newPw || !confirm) {
+    status.className = 'compose-status error';
+    status.textContent = 'Please fill in all fields.';
+    return;
+  }
+  if (newPw !== confirm) {
+    status.className = 'compose-status error';
+    status.textContent = 'New passwords do not match.';
+    return;
+  }
+  if (newPw.length < 8) {
+    status.className = 'compose-status error';
+    status.textContent = 'New password must be at least 8 characters.';
+    return;
+  }
+  try {
+    await api('/users/me/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ current_password: current, new_password: newPw }),
+    });
+    status.className = 'compose-status success';
+    status.textContent = 'Password changed successfully.';
+    document.getElementById('currentPassword').value = '';
+    document.getElementById('newPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
+  } catch (e) {
+    status.className = 'compose-status error';
+    status.textContent = 'Error: ' + e.message;
   }
 }
 

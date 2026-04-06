@@ -15,6 +15,7 @@ from agent_mailer.models import (
     ApiKeyCreateRequest,
     ApiKeyCreateResponse,
     ApiKeyResponse,
+    ChangePasswordRequest,
     LoginResponse,
     UpdateFilterTagsRequest,
     UserLoginRequest,
@@ -147,6 +148,23 @@ async def update_filter_tags(
         created_at=updated["created_at"],
         filter_tags=_parse_filter_tags(dict(updated)),
     )
+
+
+@router.put("/me/password")
+async def change_password(
+    request: Request, body: ChangePasswordRequest, user: dict = Depends(get_current_user)
+):
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters")
+    if not verify_password(body.current_password, user["password_hash"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    db = request.app.state.db
+    await db.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (hash_password(body.new_password), user["id"]),
+    )
+    await db.commit()
+    return {"detail": "Password changed successfully"}
 
 
 @router.post("/api-keys", response_model=ApiKeyCreateResponse, status_code=201)
