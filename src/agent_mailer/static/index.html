@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Agent Mailer - Operator Console</title>
-<link rel="stylesheet" href="/static/styles.css?v=2">
+<link rel="stylesheet" href="/static/styles.css?v=3">
 </head>
 <body>
 
@@ -118,6 +118,9 @@
   </div>
 </div>
 <div class="nav-buttons" id="navButtons">
+  <button class="nav-toggle" id="navToggle" onclick="toggleNavPanel()" title="Toggle panel">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+  </button>
   <button class="nav-btn" id="navInbox" onclick="showHumanInbox()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Inbox</button>
   <button class="nav-btn" id="navCompose" onclick="showCompose()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Compose</button>
   <button class="nav-btn" id="navStats" onclick="showStats()"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Stats</button>
@@ -160,12 +163,12 @@ let acIndex = -1;
 let filterTags = new Set();
 let currentUser = null;
 </script>
-<script src="/static/js/helpers.js?v=2"></script>
-<script src="/static/js/api.js?v=2"></script>
-<script src="/static/js/auth.js?v=2"></script>
-<script src="/static/js/sidebar.js?v=2"></script>
-<script src="/static/js/views.js?v=2"></script>
-<script src="/static/js/tags.js?v=2"></script>
-<script src="/static/js/events.js?v=2"></script>
+<script src="/static/js/helpers.js?v=3"></script>
+<script src="/static/js/api.js?v=3"></script>
+<script src="/static/js/auth.js?v=3"></script>
+<script src="/static/js/sidebar.js?v=3"></script>
+<script src="/static/js/views.js?v=3"></script>
+<script src="/static/js/tags.js?v=3"></script>
+<script src="/static/js/events.js?v=3"></script>
 </body>
 </html>

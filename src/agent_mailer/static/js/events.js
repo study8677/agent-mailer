@@ -15,6 +15,10 @@ function stopPolling() {
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
 }
 
+function toggleNavPanel() {
+  document.getElementById('navButtons').classList.toggle('collapsed');
+}
+
 // --- Event listeners ---
 document.getElementById('sidebarModeSelect').addEventListener('change', async (e) => {
   sidebarMode = e.target.value;

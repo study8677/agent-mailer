@@ -88,7 +88,13 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 }
 .trash-split-title:first-child { border-top: none; padding-top: 6px; }
 
-.nav-buttons { position: fixed; bottom: 0; left: 0; width: 280px; padding: 10px; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--border); background: var(--sidebar-bg); z-index: 10; }
+.nav-buttons { position: fixed; bottom: 0; left: 0; width: 280px; padding: 10px; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--border); background: var(--sidebar-bg); z-index: 10; transition: transform 0.25s ease; }
+.nav-buttons.collapsed .nav-btn { display: none; }
+.nav-buttons.collapsed { padding: 0; }
+.nav-toggle { display: flex; align-items: center; justify-content: center; width: 100%; padding: 6px 0; background: none; border: none; color: var(--muted); cursor: pointer; transition: color 0.15s; }
+.nav-toggle:hover { color: var(--accent-bright); }
+.nav-toggle svg { transition: transform 0.25s; }
+.nav-buttons.collapsed .nav-toggle svg { transform: rotate(180deg); }
 .nav-btn { padding: 9px 16px; background: none; border: none; color: var(--text-dim); cursor: pointer; text-align: left; font-size: 13px; border-radius: 6px; transition: all 0.15s; font-family: var(--sans); display: flex; align-items: center; gap: 10px; }
 .nav-btn:hover { background: var(--sidebar-hover); color: var(--text); }
 .nav-btn.active { background: var(--primary); color: #fff; }
