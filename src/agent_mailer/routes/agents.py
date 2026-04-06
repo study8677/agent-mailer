@@ -1,7 +1,9 @@
 import json
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
+from agent_mailer.config import DOMAIN
+from agent_mailer.dependencies import get_api_key_user
 from agent_mailer.models import AgentRegisterRequest, AgentResponse, AgentSetupResponse, AgentUpdateAddressRequest
 from agent_mailer.utils import get_base_url
 
@@ -16,11 +18,28 @@ def _parse_agent(row) -> dict:
     return d
 
 
+def _user_domain_suffix(username: str) -> str:
+    return f"@{username}.{DOMAIN}"
+
+
 @router.post("/agents/register", response_model=AgentResponse)
-async def register_agent(req: AgentRegisterRequest, request: Request):
+async def register_agent(
+    req: AgentRegisterRequest, request: Request, user: dict = Depends(get_api_key_user)
+):
     db = request.app.state.db
     agent_id = str(uuid.uuid4())
-    address = req.address or f"{req.name}@local"
+    suffix = _user_domain_suffix(user["username"])
+
+    if req.address:
+        if not req.address.endswith(suffix):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Address must end with '{suffix}'",
+            )
+        address = req.address
+    else:
+        address = f"{req.name}{suffix}"
+
     now = datetime.now(timezone.utc).isoformat()
 
     # check address uniqueness
@@ -29,8 +48,8 @@ async def register_agent(req: AgentRegisterRequest, request: Request):
         raise HTTPException(status_code=409, detail=f"Address '{address}' is already taken")
 
     await db.execute(
-        "INSERT INTO agents (id, name, address, role, description, system_prompt, tags, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        (agent_id, req.name, address, req.role, req.description, req.system_prompt, "[]", now),
+        "INSERT INTO agents (id, name, address, role, description, system_prompt, tags, user_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (agent_id, req.name, address, req.role, req.description, req.system_prompt, "[]", user["id"], now),
     )
     await db.commit()
     return AgentResponse(
@@ -40,14 +59,24 @@ async def register_agent(req: AgentRegisterRequest, request: Request):
 
 
 @router.patch("/agents/{agent_id}/address", response_model=AgentResponse)
-async def update_address(agent_id: str, req: AgentUpdateAddressRequest, request: Request):
+async def update_address(
+    agent_id: str, req: AgentUpdateAddressRequest, request: Request,
+    user: dict = Depends(get_api_key_user),
+):
     db = request.app.state.db
 
-    # check agent exists
-    cursor = await db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
+    # check agent exists and belongs to user
+    cursor = await db.execute("SELECT * FROM agents WHERE id = ? AND user_id = ?", (agent_id, user["id"]))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Agent not found")
+
+    suffix = _user_domain_suffix(user["username"])
+    if not req.address.endswith(suffix):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Address must end with '{suffix}'",
+        )
 
     # check new address uniqueness (exclude self)
     cursor = await db.execute("SELECT id FROM agents WHERE address = ? AND id != ?", (req.address, agent_id))
@@ -69,17 +98,19 @@ async def update_address(agent_id: str, req: AgentUpdateAddressRequest, request:
 
 
 @router.get("/agents", response_model=list[AgentResponse])
-async def list_agents(request: Request):
+async def list_agents(request: Request, user: dict = Depends(get_api_key_user)):
     db = request.app.state.db
-    cursor = await db.execute("SELECT * FROM agents ORDER BY created_at")
+    cursor = await db.execute(
+        "SELECT * FROM agents WHERE user_id = ? ORDER BY created_at", (user["id"],)
+    )
     rows = await cursor.fetchall()
     return [AgentResponse(**_parse_agent(row)) for row in rows]
 
 
 @router.get("/agents/{agent_id}", response_model=AgentResponse)
-async def get_agent(agent_id: str, request: Request):
+async def get_agent(agent_id: str, request: Request, user: dict = Depends(get_api_key_user)):
     db = request.app.state.db
-    cursor = await db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
+    cursor = await db.execute("SELECT * FROM agents WHERE id = ? AND user_id = ?", (agent_id, user["id"]))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -87,10 +118,10 @@ async def get_agent(agent_id: str, request: Request):
 
 
 @router.get("/agents/{agent_id}/setup", response_model=AgentSetupResponse)
-async def get_agent_setup(agent_id: str, request: Request):
+async def get_agent_setup(agent_id: str, request: Request, user: dict = Depends(get_api_key_user)):
     """返回该 Agent 的 AGENT.md 内容和 CLAUDE.md 模板，用于工作目录初始化。"""
     db = request.app.state.db
-    cursor = await db.execute("SELECT * FROM agents WHERE id = ?", (agent_id,))
+    cursor = await db.execute("SELECT * FROM agents WHERE id = ? AND user_id = ?", (agent_id, user["id"]))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -112,17 +143,25 @@ async def get_agent_setup(agent_id: str, request: Request):
 
 ## 邮箱协议
 
-你是本地多智能体协作网络中的一个节点。你通过 Mail Broker 与其他 Agent 异步通信。
+你是多智能体协作网络中的一个节点。你通过 Mail Broker 与其他 Agent 异步通信。
 你的邮箱地址是 `{agent['address']}`，所有收发件均使用此地址。
+
+### 认证
+所有 API 请求必须携带 `X-API-Key` 头：
+```
+X-API-Key: <your_api_key>
+```
 
 ### 收件 (读取任务)
 ```
 GET {broker_url}/messages/inbox/{agent['address']}?agent_id={agent['id']}
+Headers: X-API-Key: <your_api_key>
 ```
 
 ### 发件 (发送消息)
 ```
 POST {broker_url}/messages/send
+Headers: X-API-Key: <your_api_key>
 Body: {{"agent_id": "{agent['id']}", "from_agent": "{agent['address']}", "to_agent": "<目标agent地址>", "action": "send|reply|forward", "subject": "...", "body": "...", "parent_id": "<reply/forward 时必填>", "forward_scope": "<可选，仅 forward：message=仅父邮件 | thread=整线（不含已删单封）>"}}
 ```
 
@@ -130,16 +169,19 @@ Body: {{"agent_id": "{agent['id']}", "from_agent": "{agent['address']}", "to_age
 ```
 PATCH {broker_url}/messages/{{message_id}}/read
 PATCH {broker_url}/messages/{{message_id}}/unread
+Headers: X-API-Key: <your_api_key>
 ```
 
 ### 查看会话线程
 ```
 GET {broker_url}/messages/thread/{{thread_id}}
+Headers: X-API-Key: <your_api_key>
 ```
 
 ### 查看所有 Agent
 ```
 GET {broker_url}/agents
+Headers: X-API-Key: <your_api_key>
 ```
 """
 

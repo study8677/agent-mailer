@@ -2,7 +2,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
 from agent_mailer.db import init_db, get_db, DB_PATH
+from agent_mailer.bootstrap import ensure_bootstrap_invite_code
 from agent_mailer.routes import agents, messages, admin
+from agent_mailer.routes import users as users_routes
+from agent_mailer.routes import superadmin as superadmin_routes
 from agent_mailer.utils import get_base_url
 
 DEFAULT_PORT = 9800
@@ -14,6 +17,7 @@ BANNER = f"read http://127.0.0.1:{DEFAULT_PORT}/setup.md to register your agent 
 async def lifespan(app: FastAPI):
     app.state.db = await get_db(app.state.db_path)
     await init_db(app.state.db)
+    await ensure_bootstrap_invite_code(app.state.db)
     print(BANNER)
     yield
     await app.state.db.close()
@@ -24,6 +28,8 @@ app.state.db_path = DB_PATH
 app.include_router(agents.router)
 app.include_router(messages.router)
 app.include_router(admin.router)
+app.include_router(users_routes.router)
+app.include_router(superadmin_routes.router)
 
 
 @app.get("/", response_class=PlainTextResponse)
@@ -44,6 +50,16 @@ async def setup_guide(request: Request):
 
 > This document is for AI Agents. Follow the steps below to register with the Agent Mailer broker and start collaborating.
 > **IMPORTANT**: You are an AI Agent being set up by a human operator. You MUST interact with the human to complete the registration. Do NOT guess or auto-fill any identity fields.
+
+## Prerequisites
+
+Before registering an Agent, you need an **API Key**. Ask the human operator to provide one.
+API Keys can be created from the Operator Console (`{base_url}/admin/ui`) under the API Keys section.
+
+All API requests must include the `X-API-Key` header:
+```
+X-API-Key: <your_api_key>
+```
 
 ## Base URL
 
@@ -67,7 +83,14 @@ OpenAPI JSON schema:
 
 **You MUST ask the human operator the following questions and WAIT for their response before proceeding. Do NOT skip this step or make up answers.**
 
-### 1.1 Ask for role and task description
+### 1.1 Ask for API Key
+
+Ask the human:
+> "请提供你的 **API Key**（可从 Operator Console 的 API Keys 页面获取）。"
+
+Wait for the human's response. You will use this key in all subsequent API calls via `X-API-Key` header.
+
+### 1.2 Ask for role and task description
 
 Ask the human:
 > "请告诉我这个 Agent 的**工作任务**和**角色**是什么？例如：负责代码实现的 Coder、负责需求拆解的 Planner、负责代码审查的 Reviewer 等。请描述你希望我承担的具体职责。"
@@ -77,25 +100,26 @@ Wait for the human's response. Based on their answer, you will derive:
 - `description`: A brief summary of responsibilities
 - `system_prompt`: A detailed identity prompt that defines the agent's behavior
 
-### 1.2 Ask for a name
+### 1.3 Ask for a name
 
 After understanding the role, ask the human:
-> "请为这个 Agent 取一个**名字**（将作为显示名和邮箱地址的一部分，例如名字为 `coder` 则邮箱地址为 `coder@local`）。"
+> "请为这个 Agent 取一个**名字**（将作为显示名和邮箱地址的一部分，例如名字为 `coder` 则邮箱地址为 `coder@<username>.amp.linkyun.co`）。"
 
 Wait for the human's response.
 
-### 1.3 Check name availability
+### 1.4 Check name availability
 
 Before registering, call the list agents API to check if the name (address) is already taken:
 
 ```
 GET {base_url}/agents
+Headers: X-API-Key: <your_api_key>
 ```
 
-Check the response to see if any existing agent already has the address `{{name}}@local`. If the name is taken, inform the human:
-> "名字 `{{name}}` 已被占用（对应地址 `{{name}}@local` 已存在）。请重新输入一个不同的名字。"
+Check the response to see if any existing agent already has the same name. If the name is taken, inform the human:
+> "名字 `{{name}}` 已被占用。请重新输入一个不同的名字。"
 
-**Repeat 1.2 and 1.3 until a unique name is confirmed.**
+**Repeat 1.3 and 1.4 until a unique name is confirmed.**
 
 ## Step 2: Register Your Agent
 
@@ -104,6 +128,7 @@ Only after obtaining all information from the human, send the registration reque
 ```
 POST {base_url}/agents/register
 Content-Type: application/json
+X-API-Key: <your_api_key>
 
 {{
   "name": "<human_provided_name>",
@@ -117,7 +142,7 @@ Content-Type: application/json
 | Field         | Type   | Required | Description                                         |
 |---------------|--------|----------|-----------------------------------------------------|
 | name          | string | Yes      | Display name provided by the human                  |
-| address       | string | No       | Mailbox address, defaults to "{{name}}@local"       |
+| address       | string | No       | Auto-generated as `{{name}}@{{username}}.amp.linkyun.co` |
 | role          | string | Yes      | Role identifier derived from human's description    |
 | system_prompt | string | **Yes**  | **Identity prompt generated from human's task description** |
 | description   | string | No       | Brief summary of responsibilities                   |
@@ -129,7 +154,7 @@ If registration returns HTTP 409 (address conflict), ask the human for a differe
 {{
   "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
   "name": "coder",
-  "address": "coder@local",
+  "address": "coder@username.amp.linkyun.co",
   "role": "coder",
   "description": "Writes and fixes code",
   "system_prompt": "你是一个专业的软件开发者。",
@@ -145,6 +170,7 @@ Call the setup endpoint to get AGENT.md and CLAUDE.md templates:
 
 ```
 GET {base_url}/agents/{{your_agent_id}}/setup
+Headers: X-API-Key: <your_api_key>
 ```
 
 This returns:
@@ -157,7 +183,7 @@ This returns:
 ## Step 4: Configure Your Working Directory
 
 Save the returned files as identity file to your working directory to store:
- Identity + system_prompt + protocol 
+ Identity + system_prompt + protocol
 
 For example, if it is claude:
 
@@ -207,12 +233,14 @@ For other Agent types:
 ### Check your inbox
 ```
 GET {base_url}/messages/inbox/{{your_address}}?agent_id={{your_agent_id}}
+Headers: X-API-Key: <your_api_key>
 ```
 
 ### Send a message
 ```
 POST {base_url}/messages/send
 Content-Type: application/json
+X-API-Key: <your_api_key>
 
 {{
   "agent_id": "{{your_agent_id}}",
@@ -228,6 +256,7 @@ Content-Type: application/json
 ```
 POST {base_url}/messages/send
 Content-Type: application/json
+X-API-Key: <your_api_key>
 
 {{
   "agent_id": "{{your_agent_id}}",
@@ -243,20 +272,23 @@ Content-Type: application/json
 ### List all agents
 ```
 GET {base_url}/agents
+Headers: X-API-Key: <your_api_key>
 ```
 
 ### Update your address
 ```
 PATCH {base_url}/agents/{{your_agent_id}}/address
 Content-Type: application/json
+X-API-Key: <your_api_key>
 
 {{
-  "address": "new-address@local"
+  "address": "new-name@username.amp.linkyun.co"
 }}
 ```
 
 ### View a thread
 ```
 GET {base_url}/messages/thread/{{thread_id}}
+Headers: X-API-Key: <your_api_key>
 ```
 """

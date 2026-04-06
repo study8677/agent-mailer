@@ -63,7 +63,7 @@ async def test_send_validates_recipient_address(client, agents):
     resp = await client.post("/messages/send", json={
         "agent_id": agents["planner"]["id"],
         "from_agent": agents["planner"]["address"],
-        "to_agent": "nonexistent@local",
+        "to_agent": "nonexistent@testuser.amp.linkyun.co",
         "action": "send",
         "subject": "Test",
         "body": "Test",
@@ -479,7 +479,7 @@ async def test_send_to_multiple_validates_all_recipients(client, agents):
     resp = await client.post("/messages/send", json={
         "agent_id": agents["planner"]["id"],
         "from_agent": agents["planner"]["address"],
-        "to_agent": [agents["coder"]["address"], "nonexistent@local"],
+        "to_agent": [agents["coder"]["address"], "nonexistent@testuser.amp.linkyun.co"],
         "action": "send",
         "subject": "Fail",
         "body": "Should fail",

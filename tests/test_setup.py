@@ -41,6 +41,9 @@ async def test_setup_md_requires_human_interaction(client):
     assert "重新输入" in body
     # must instruct to wait for human
     assert "WAIT" in body or "MUST" in body
+    # must mention API Key
+    assert "X-API-Key" in body
+    assert "API Key" in body
 
 
 async def test_root_uses_dynamic_base_url(client):

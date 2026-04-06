@@ -1,8 +1,9 @@
 import json
 import uuid
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from agent_mailer.db import INBOX_VISIBILITY_SQL
+from agent_mailer.dependencies import get_api_key_user
 from agent_mailer.forward_body import build_forward_body
 from agent_mailer.models import SendRequest, MessageResponse, render_body_html
 
@@ -17,9 +18,11 @@ def _row_to_response(row) -> MessageResponse:
     return MessageResponse(**d)
 
 
-async def _verify_identity(db, agent_id: str, address: str):
-    """Verify that agent_id exists and its address matches the given address."""
-    cursor = await db.execute("SELECT address FROM agents WHERE id = ?", (agent_id,))
+async def _verify_identity(db, agent_id: str, address: str, user_id: str):
+    """Verify that agent_id exists, its address matches, and it belongs to user."""
+    cursor = await db.execute(
+        "SELECT address, user_id FROM agents WHERE id = ?", (agent_id,)
+    )
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
@@ -28,23 +31,48 @@ async def _verify_identity(db, agent_id: str, address: str):
             status_code=403,
             detail=f"Agent '{agent_id}' does not own address '{address}'",
         )
+    if row["user_id"] != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Agent does not belong to current user",
+        )
+
+
+async def _verify_address_ownership(db, address: str, user_id: str):
+    """Verify that the given address belongs to an agent owned by user_id."""
+    cursor = await db.execute(
+        "SELECT user_id FROM agents WHERE address = ?", (address,)
+    )
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail=f"Address '{address}' not found")
+    if row["user_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Address does not belong to current user")
 
 
 @router.post("/messages/send", response_model=MessageResponse | list[MessageResponse])
-async def send_message(req: SendRequest, request: Request):
+async def send_message(
+    req: SendRequest, request: Request, user: dict = Depends(get_api_key_user)
+):
     db = request.app.state.db
 
-    # verify sender identity: agent_id must own from_agent address
-    await _verify_identity(db, req.agent_id, req.from_agent)
+    # verify sender identity: agent_id must own from_agent address and belong to user
+    await _verify_identity(db, req.agent_id, req.from_agent, user["id"])
 
     # normalize to_agent to list
     recipients = req.to_agent if isinstance(req.to_agent, list) else [req.to_agent]
 
-    # validate all recipient addresses exist
+    # validate all recipient addresses exist and belong to same user (no cross-tenant)
     for addr in recipients:
-        cursor = await db.execute("SELECT id FROM agents WHERE address = ?", (addr,))
-        if not await cursor.fetchone():
+        cursor = await db.execute("SELECT user_id FROM agents WHERE address = ?", (addr,))
+        recipient_row = await cursor.fetchone()
+        if not recipient_row:
             raise HTTPException(status_code=404, detail=f"Recipient address '{addr}' not found")
+        if recipient_row["user_id"] != user["id"]:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Cross-tenant messaging is not allowed (recipient '{addr}')",
+            )
 
     # reply/forward require parent_id
     if req.action in ("reply", "forward") and not req.parent_id:
@@ -105,11 +133,14 @@ async def send_message(req: SendRequest, request: Request):
 
 
 @router.get("/messages/inbox/{address}", response_model=list[MessageResponse])
-async def inbox(address: str, request: Request, agent_id: str = Query(...), all: bool = False):
+async def inbox(
+    address: str, request: Request, agent_id: str = Query(...),
+    all: bool = False, user: dict = Depends(get_api_key_user),
+):
     db = request.app.state.db
 
-    # verify caller identity: agent_id must own this address
-    await _verify_identity(db, agent_id, address)
+    # verify caller identity: agent_id must own this address and belong to user
+    await _verify_identity(db, agent_id, address, user["id"])
 
     vis = INBOX_VISIBILITY_SQL
     if all:
@@ -127,8 +158,17 @@ async def inbox(address: str, request: Request, agent_id: str = Query(...), all:
 
 
 @router.get("/messages/thread/{thread_id}", response_model=list[MessageResponse])
-async def thread(thread_id: str, request: Request):
+async def thread(
+    thread_id: str, request: Request, user: dict = Depends(get_api_key_user)
+):
     db = request.app.state.db
+
+    # Get all user's agent addresses
+    cursor = await db.execute(
+        "SELECT address FROM agents WHERE user_id = ?", (user["id"],)
+    )
+    user_addresses = {row["address"] for row in await cursor.fetchall()}
+
     cursor = await db.execute(
         "SELECT * FROM messages WHERE thread_id = ? "
         "AND id NOT IN (SELECT message_id FROM trashed_messages) "
@@ -136,28 +176,49 @@ async def thread(thread_id: str, request: Request):
         (thread_id,),
     )
     rows = await cursor.fetchall()
+
+    # Verify at least one message involves current user's agent
+    if not any(row["from_agent"] in user_addresses or row["to_agent"] in user_addresses for row in rows):
+        raise HTTPException(status_code=404, detail="Thread not found")
+
     return [_row_to_response(row) for row in rows]
 
 
 @router.patch("/messages/{message_id}/read", response_model=MessageResponse)
-async def mark_read(message_id: str, request: Request):
+async def mark_read(
+    message_id: str, request: Request, user: dict = Depends(get_api_key_user)
+):
     db = request.app.state.db
+    cursor = await db.execute("SELECT * FROM messages WHERE id = ?", (message_id,))
+    row = await cursor.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    # Verify to_agent belongs to current user
+    await _verify_address_ownership(db, row["to_agent"], user["id"])
+
     await db.execute("UPDATE messages SET is_read = 1 WHERE id = ?", (message_id,))
     await db.commit()
     cursor = await db.execute("SELECT * FROM messages WHERE id = ?", (message_id,))
     row = await cursor.fetchone()
-    if not row:
-        raise HTTPException(status_code=404, detail="Message not found")
     return _row_to_response(row)
 
 
 @router.patch("/messages/{message_id}/unread", response_model=MessageResponse)
-async def mark_unread(message_id: str, request: Request):
+async def mark_unread(
+    message_id: str, request: Request, user: dict = Depends(get_api_key_user)
+):
     db = request.app.state.db
-    await db.execute("UPDATE messages SET is_read = 0 WHERE id = ?", (message_id,))
-    await db.commit()
     cursor = await db.execute("SELECT * FROM messages WHERE id = ?", (message_id,))
     row = await cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Message not found")
+
+    # Verify to_agent belongs to current user
+    await _verify_address_ownership(db, row["to_agent"], user["id"])
+
+    await db.execute("UPDATE messages SET is_read = 0 WHERE id = ?", (message_id,))
+    await db.commit()
+    cursor = await db.execute("SELECT * FROM messages WHERE id = ?", (message_id,))
+    row = await cursor.fetchone()
     return _row_to_response(row)

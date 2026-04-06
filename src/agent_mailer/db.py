@@ -1,3 +1,5 @@
+import sqlite3
+
 import aiosqlite
 
 DB_PATH = "agent_mailer.db"
@@ -51,6 +53,41 @@ CREATE TABLE IF NOT EXISTS trashed_messages (
 );
 """
 
+USERS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    is_superadmin INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL
+);
+"""
+
+INVITE_CODES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS invite_codes (
+    code TEXT PRIMARY KEY,
+    created_by TEXT NOT NULL,
+    used_by TEXT,
+    used_at TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (created_by) REFERENCES users(id),
+    FOREIGN KEY (used_by) REFERENCES users(id)
+);
+"""
+
+API_KEYS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    key_hash TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    last_used_at TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+"""
+
 # Inbox listings (agent + admin) hide messages in archived or trashed threads.
 INBOX_THREAD_VISIBILITY_SQL = (
     "thread_id NOT IN (SELECT thread_id FROM archived_threads) "
@@ -80,8 +117,11 @@ async def _add_column_if_missing(
     """Additive migration helper — silently skips if column already exists."""
     try:
         await db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
-    except Exception:
-        pass
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e).lower():
+            pass
+        else:
+            raise
 
 
 async def init_db(db: aiosqlite.Connection):
@@ -89,5 +129,10 @@ async def init_db(db: aiosqlite.Connection):
     await db.executescript(ARCHIVED_THREADS_SCHEMA)
     await db.executescript(TRASHED_THREADS_SCHEMA)
     await db.executescript(TRASHED_MESSAGES_SCHEMA)
+    await db.executescript(USERS_SCHEMA)
+    await db.executescript(INVITE_CODES_SCHEMA)
+    await db.executescript(API_KEYS_SCHEMA)
     await _add_column_if_missing(db, "agents", "tags", "TEXT NOT NULL DEFAULT '[]'")
+    await _add_column_if_missing(db, "agents", "user_id", "TEXT")
+    await _add_column_if_missing(db, "users", "filter_tags", "TEXT NOT NULL DEFAULT '[]'")
     await db.commit()

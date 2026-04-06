@@ -1,0 +1,15 @@
+services:
+  agent-mailer:
+    build: .
+    container_name: agent-mailer
+    ports:
+      - "80:9800"
+    environment:
+      - AGENT_MAILER_SECRET_KEY=${AGENT_MAILER_SECRET_KEY}
+      - AGENT_MAILER_DOMAIN=amp.linkyun.co
+    volumes:
+      - agent-mailer-data:/data
+    restart: always
+
+volumes:
+  agent-mailer-data:

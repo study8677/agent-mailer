@@ -135,3 +135,59 @@ class TrashedMessageListItem(BaseModel):
 class TrashedMessageDetail(BaseModel):
     trashed_at: str
     message: MessageResponse
+
+
+# --- User / Auth models ---
+
+
+class UserRegisterRequest(BaseModel):
+    username: str
+    password: str
+    invite_code: str
+
+
+class UserLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    is_superadmin: bool
+    created_at: str
+    filter_tags: list[str] = []
+
+
+class UpdateFilterTagsRequest(BaseModel):
+    filter_tags: list[str]
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str = ""
+
+
+class ApiKeyResponse(BaseModel):
+    id: str
+    name: str
+    key_prefix: str
+    created_at: str
+    last_used_at: str | None
+    is_active: bool
+
+
+class ApiKeyCreateResponse(ApiKeyResponse):
+    raw_key: str
+
+
+class InviteCodeResponse(BaseModel):
+    code: str
+    created_by: str
+    used_by: str | None
+    used_at: str | None
+    created_at: str
+
+
+class LoginResponse(BaseModel):
+    token: str
+    user: UserResponse

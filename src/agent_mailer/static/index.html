@@ -26,6 +26,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; }
 
+/* Impersonation banner */
+.impersonate-banner { background: #fbbf24; color: #78350f; padding: 8px 24px; display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 500; flex-shrink: 0; }
+.impersonate-banner button { background: #92400e; color: #fff; border: none; border-radius: 4px; padding: 4px 12px; font-size: 12px; cursor: pointer; font-weight: 500; }
+.impersonate-banner button:hover { background: #78350f; }
+
 /* Header */
 .header { background: var(--sidebar-bg); color: #fff; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
 .header h1 { font-size: 18px; font-weight: 600; }
@@ -34,6 +39,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .header-right select { background: var(--sidebar-hover); color: #fff; border: 1px solid #555; border-radius: 4px; padding: 2px 6px; font-size: 12px; }
 .poll-status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block; }
 .poll-status.paused { background: var(--muted); }
+.header-user { color: var(--sidebar-text); font-size: 13px; }
+.header-logout-btn { background: none; border: 1px solid #555; border-radius: 4px; color: var(--sidebar-text); padding: 3px 10px; font-size: 12px; cursor: pointer; transition: background 0.15s; }
+.header-logout-btn:hover { background: var(--sidebar-hover); color: #fff; }
 
 /* Layout */
 .layout { display: flex; flex: 1; overflow: hidden; }
@@ -207,19 +215,21 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 /* Sidebar mini tags */
 .sidebar-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .sidebar-tag { font-size: 10px; background: rgba(124,58,237,0.15); color: #a78bfa; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
-/* Tag filter bar */
+/* Tag filter button */
 .sidebar-filter-row { display: flex; align-items: center; gap: 6px; padding: 0 12px; }
 .sidebar-filter-btn { background: none; border: 1px solid #45475a; color: var(--sidebar-text); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; white-space: nowrap; transition: background 0.15s, border-color 0.15s; display: flex; align-items: center; gap: 4px; }
 .sidebar-filter-btn:hover { background: var(--sidebar-hover); }
 .sidebar-filter-btn.active { border-color: var(--primary); color: var(--primary); background: rgba(124,58,237,0.1); }
 .sidebar-filter-btn .filter-icon { font-size: 13px; }
-.sidebar-filter-bar { display: none; flex-wrap: wrap; gap: 5px; padding: 6px 12px 2px; }
-.sidebar-filter-bar.visible { display: flex; }
-.filter-tag { font-size: 11px; padding: 3px 10px; border-radius: 12px; cursor: pointer; border: 1px solid #45475a; background: transparent; color: var(--sidebar-text); transition: all 0.15s; white-space: nowrap; }
-.filter-tag:hover { border-color: #a78bfa; color: #a78bfa; }
-.filter-tag.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
-.filter-clear { font-size: 10px; color: var(--muted); cursor: pointer; padding: 3px 6px; border: none; background: none; text-decoration: underline; }
-.filter-clear:hover { color: var(--sidebar-text); }
+/* Tag filter modal */
+.filter-modal-box { background: var(--card-bg); border-radius: 12px; padding: 24px; max-width: 420px; width: 90vw; box-shadow: 0 8px 32px rgba(0,0,0,0.25); animation: modalIn 0.18s ease; }
+.filter-modal-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+.filter-modal-tags { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; min-height: 40px; }
+.filter-modal-tag { font-size: 14px; padding: 8px 18px; border-radius: 20px; cursor: pointer; border: 1px solid var(--border); background: transparent; color: var(--text); transition: all 0.15s; white-space: nowrap; }
+.filter-modal-tag:hover { border-color: var(--primary); color: var(--primary); }
+.filter-modal-tag.selected { background: var(--primary); border-color: var(--primary); color: #fff; }
+.filter-modal-empty { font-size: 14px; color: var(--muted); padding: 12px 0; }
+.filter-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
 /* Agent delete button */
 .agent-delete-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 4px 8px; border-radius: 4px; opacity: 0; transition: opacity 0.15s, color 0.15s, background 0.15s; line-height: 1; }
@@ -244,6 +254,49 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 
 /* Sidebar overlay backdrop (mobile only) */
 .sidebar-backdrop { display: none; }
+
+/* Login page */
+.login-page { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; }
+.login-page.visible { display: flex; }
+.login-box { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 40px 36px; width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+.login-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; color: var(--text); }
+.login-box .login-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+.login-form { display: flex; flex-direction: column; gap: 14px; }
+.login-form label { font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 4px; }
+.login-form input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s; }
+.login-form input:focus { border-color: var(--primary); }
+.login-form .login-btn { padding: 11px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 15px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
+.login-form .login-btn:hover { background: #6d28d9; }
+.login-form .login-btn:disabled { background: var(--muted); cursor: not-allowed; }
+.login-error { font-size: 13px; color: var(--danger); background: #fee2e2; padding: 8px 12px; border-radius: 6px; }
+.login-toggle { font-size: 13px; color: var(--muted); text-align: center; margin-top: 18px; }
+.login-toggle a { color: var(--primary); cursor: pointer; text-decoration: underline; }
+
+/* API Keys page */
+.apikey-new-box { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; margin-bottom: 20px; }
+.apikey-new-box .apikey-value { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 13px; background: #fff; border: 1px solid #86efac; border-radius: 6px; padding: 10px 14px; word-break: break-all; margin: 10px 0 8px; }
+.apikey-new-box .apikey-warning { font-size: 12px; color: #166534; font-weight: 500; margin-bottom: 8px; }
+.apikey-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.apikey-table th { text-align: left; padding: 8px 12px; background: #f3f4f6; border-bottom: 2px solid var(--border); font-weight: 600; }
+.apikey-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.apikey-table tr:hover td { background: #f9fafb; }
+.apikey-masked { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; color: var(--muted); }
+.apikey-status-active { color: var(--success); font-weight: 600; font-size: 12px; }
+.apikey-status-inactive { color: var(--danger); font-weight: 600; font-size: 12px; }
+.btn-danger-sm { background: var(--danger); color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-weight: 500; }
+.btn-danger-sm:hover { background: #dc2626; }
+.btn-sm { background: #475569; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; font-size: 12px; cursor: pointer; font-weight: 500; }
+.btn-sm:hover { background: #334155; }
+
+/* Admin page */
+.admin-section { margin-bottom: 32px; }
+.admin-section h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th { text-align: left; padding: 8px 12px; background: #f3f4f6; border-bottom: 2px solid var(--border); font-weight: 600; }
+.admin-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.admin-table tr:hover td { background: #f9fafb; }
+.invite-code-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; letter-spacing: 0.5px; }
+.superadmin-badge { background: #fef3c7; color: #92400e; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
 
 /* ===== Mobile ===== */
 @media (max-width: 768px) {
@@ -299,10 +352,67 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   .compose-form select,
   .compose-form input:not([type="radio"]):not([type="checkbox"]),
   .compose-form textarea { font-size: 16px; }
+  .login-box { margin: 16px; padding: 28px 20px; }
 }
 </style>
 </head>
 <body>
+
+<!-- Login / Register Page -->
+<div class="login-page" id="loginPage">
+  <div class="login-box">
+    <h2>Agent Mailer</h2>
+    <p class="login-subtitle" id="loginSubtitle">Operator Console — Sign in to continue</p>
+
+    <!-- Login form -->
+    <div id="loginFormWrap">
+      <div class="login-form" id="loginForm">
+        <div>
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" placeholder="Enter username" autocomplete="username">
+        </div>
+        <div>
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" placeholder="Enter password" autocomplete="current-password">
+        </div>
+        <div id="loginError" class="login-error" style="display:none"></div>
+        <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In</button>
+      </div>
+      <div class="login-toggle">
+        Have an invite code? <a onclick="showRegisterForm()">Register</a>
+      </div>
+    </div>
+
+    <!-- Register form -->
+    <div id="registerFormWrap" style="display:none">
+      <div class="login-form" id="registerForm">
+        <div>
+          <label for="regUsername">Username</label>
+          <input type="text" id="regUsername" placeholder="Choose a username" autocomplete="username">
+        </div>
+        <div>
+          <label for="regPassword">Password</label>
+          <input type="password" id="regPassword" placeholder="Choose a password" autocomplete="new-password">
+        </div>
+        <div>
+          <label for="regInviteCode">Invite Code</label>
+          <input type="text" id="regInviteCode" placeholder="Enter invite code">
+        </div>
+        <div id="registerError" class="login-error" style="display:none"></div>
+        <button class="login-btn" id="registerBtn" onclick="doRegister()">Create Account</button>
+      </div>
+      <div class="login-toggle">
+        Already have an account? <a onclick="showLoginForm()">Sign in</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Impersonation banner -->
+<div class="impersonate-banner" id="impersonateBanner" style="display:none">
+  <span id="impersonateLabel"></span>
+  <button onclick="exitImpersonation()">退出模拟</button>
+</div>
 
 <div class="header">
   <div style="display:flex;align-items:center;gap:8px">
@@ -320,6 +430,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
         <option value="0">Off</option>
       </select>
     </label>
+    <span class="header-user" id="headerUsername"></span>
+    <button class="header-logout-btn" id="logoutBtn" onclick="doLogout()">Logout</button>
   </div>
 </div>
 
@@ -334,11 +446,20 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
       </select>
     </div>
     <div class="sidebar-filter-row" id="filterRow">
-      <button class="sidebar-filter-btn" id="filterToggleBtn" onclick="toggleFilterBar()">
-        <span class="filter-icon">▸</span> 标签过滤
+      <button class="sidebar-filter-btn" id="filterToggleBtn" onclick="openFilterModal()">
+        <span class="filter-icon">&#9881;</span> 标签过滤
       </button>
     </div>
-    <div class="sidebar-filter-bar" id="filterBar"></div>
+<div class="modal-overlay" id="filterModal" onclick="if(event.target===this)closeFilterModal()">
+  <div class="filter-modal-box">
+    <div class="filter-modal-title">标签过滤</div>
+    <div class="filter-modal-tags" id="filterModalTags"></div>
+    <div class="filter-modal-actions">
+      <button class="modal-cancel" onclick="clearFilterTags()">清除全部</button>
+      <button class="btn btn-primary" onclick="closeFilterModal()">确定</button>
+    </div>
+  </div>
+</div>
     <div class="agent-list" id="agentList"></div>
   </div>
   <div class="main" id="main">
@@ -350,6 +471,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
   <button class="nav-btn" id="navStats" onclick="showStats()">Stats</button>
   <button class="nav-btn" id="navArchive" onclick="showArchive()">Archive</button>
   <button class="nav-btn" id="navTrash" onclick="showTrash()">Trash</button>
+  <button class="nav-btn" id="navApiKeys" onclick="showApiKeys()">API Keys</button>
+  <button class="nav-btn" id="navAdmin" onclick="showAdmin()" style="display:none">Admin</button>
 </div>
 
 <div class="modal-overlay" id="confirmModal">
@@ -383,11 +506,172 @@ let msgCache = {}; // id -> message object
 let tagEditingActive = false;
 let acIndex = -1;
 let filterTags = new Set();
-let filterBarOpen = false;
+let currentUser = null; // logged-in user info
+
+// --- Auth helpers ---
+function clearSessionCookie() {
+  document.cookie = 'session_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+}
+
+function showLoginPage() {
+  stopPolling();
+  document.getElementById('loginPage').classList.add('visible');
+}
+
+function hideLoginPage() {
+  document.getElementById('loginPage').classList.remove('visible');
+}
+
+function showLoginForm() {
+  document.getElementById('loginFormWrap').style.display = '';
+  document.getElementById('registerFormWrap').style.display = 'none';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('loginSubtitle').textContent = 'Operator Console — Sign in to continue';
+}
+
+function showRegisterForm() {
+  document.getElementById('loginFormWrap').style.display = 'none';
+  document.getElementById('registerFormWrap').style.display = '';
+  document.getElementById('registerError').style.display = 'none';
+  document.getElementById('loginSubtitle').textContent = 'Create a new account';
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  errEl.style.display = 'none';
+  if (!username || !password) {
+    errEl.textContent = 'Please enter username and password.';
+    errEl.style.display = '';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Signing in...';
+  try {
+    const resp = await fetch(BASE + '/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ username, password }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || 'Login failed');
+    }
+    window.location.reload();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Sign In';
+  }
+}
+
+async function doRegister() {
+  const btn = document.getElementById('registerBtn');
+  const errEl = document.getElementById('registerError');
+  const username = document.getElementById('regUsername').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const invite_code = document.getElementById('regInviteCode').value.trim();
+  errEl.style.display = 'none';
+  if (!username || !password || !invite_code) {
+    errEl.textContent = 'Please fill in all fields.';
+    errEl.style.display = '';
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Creating account...';
+  try {
+    const resp = await fetch(BASE + '/users/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ username, password, invite_code }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || 'Registration failed');
+    }
+    // After registration, attempt login
+    const loginResp = await fetch(BASE + '/users/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ username, password }),
+    });
+    if (!loginResp.ok) {
+      errEl.textContent = 'Account created! Please sign in.';
+      errEl.style.display = '';
+      showLoginForm();
+      return;
+    }
+    window.location.reload();
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = '';
+    btn.disabled = false;
+    btn.textContent = 'Create Account';
+  }
+}
+
+async function doLogout() {
+  await fetch(BASE + '/users/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+  showLoginPage();
+}
+
+function exitImpersonation() {
+  clearSessionCookie();
+  window.location.reload();
+}
+
+async function checkAuth() {
+  try {
+    const resp = await fetch(BASE + '/users/me', { credentials: 'same-origin' });
+    if (resp.status === 401) {
+      showLoginPage();
+      return false;
+    }
+    if (!resp.ok) {
+      showLoginPage();
+      return false;
+    }
+    currentUser = await resp.json();
+    // Show impersonation banner if applicable
+    if (currentUser.impersonated_by) {
+      const banner = document.getElementById('impersonateBanner');
+      document.getElementById('impersonateLabel').textContent =
+        '正在以 ' + currentUser.username + ' 身份操作';
+      banner.style.display = '';
+    }
+    // Show username in header
+    document.getElementById('headerUsername').textContent = currentUser.username;
+    // Show admin nav if superadmin
+    if (currentUser.is_superadmin) {
+      document.getElementById('navAdmin').style.display = '';
+    }
+    // Restore saved filter tags
+    if (currentUser.filter_tags && currentUser.filter_tags.length > 0) {
+      filterTags = new Set(currentUser.filter_tags);
+      updateFilterBtn();
+    }
+    return true;
+  } catch (e) {
+    showLoginPage();
+    return false;
+  }
+}
 
 // --- API helpers ---
 async function api(path, opts) {
-  const resp = await fetch(BASE + path, opts);
+  const options = { credentials: 'same-origin', ...opts };
+  const resp = await fetch(BASE + path, options);
+  if (resp.status === 401) {
+    clearSessionCookie();
+    showLoginPage();
+    throw new Error('Session expired. Please log in again.');
+  }
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ detail: resp.statusText }));
     throw new Error(err.detail || resp.statusText);
@@ -402,7 +686,7 @@ async function fetchStats() {
 }
 
 async function fetchAgents() {
-  agents = await api('/agents');
+  agents = await api('/admin/agents');
   return agents;
 }
 
@@ -411,7 +695,7 @@ async function fetchInbox(address) {
 }
 
 async function fetchThread(threadId) {
-  return api(`/messages/thread/${encodeURIComponent(threadId)}`);
+  return api(`/admin/messages/thread/${encodeURIComponent(threadId)}`);
 }
 
 async function fetchThreadsSummary(opts = {}) {
@@ -797,7 +1081,7 @@ async function toggleMsg(msgId, ev) {
   if (expanding) {
     // auto mark as read
     try {
-      await api(`/messages/${encodeURIComponent(msgId)}/read`, { method: 'PATCH' });
+      await api(`/admin/messages/${encodeURIComponent(msgId)}/read`, { method: 'PATCH' });
       refreshSidebar();
     } catch (e) { /* ignore */ }
   }
@@ -1095,7 +1379,7 @@ function replyToMsg(msgId, ev) {
 async function markMsgUnread(msgId, ev) {
   if (ev) ev.stopPropagation();
   try {
-    const updated = await api(`/messages/${encodeURIComponent(msgId)}/unread`, { method: 'PATCH' });
+    const updated = await api(`/admin/messages/${encodeURIComponent(msgId)}/unread`, { method: 'PATCH' });
     msgCache[msgId] = { ...msgCache[msgId], ...updated };
     await refreshSidebar();
     if (currentView?.type === 'inbox') await renderInbox();
@@ -1207,6 +1491,250 @@ async function renderStats() {
     </div>`;
 }
 
+// --- API Keys ---
+async function showApiKeys() {
+  clearNav();
+  setSidebarSpecialMode('none');
+  document.getElementById('navApiKeys').classList.add('active');
+  currentView = { type: 'apikeys' };
+  await renderApiKeys();
+}
+
+async function renderApiKeys(newKeyData) {
+  if (currentView?.type !== 'apikeys') return;
+  const main = document.getElementById('main');
+  let keys = [];
+  try {
+    keys = await api('/users/api-keys');
+  } catch (e) {
+    main.innerHTML = `<div class="card"><p class="empty">Failed to load API keys: ${esc(e.message)}</p></div>`;
+    return;
+  }
+
+  const newKeyHtml = newKeyData ? `
+    <div class="apikey-new-box">
+      <div class="apikey-warning">&#9888; This key will only be shown once. Copy it now!</div>
+      <div class="apikey-value" id="newKeyValue">${esc(newKeyData.key)}</div>
+      <button class="btn-sm" onclick="copyNewKey()">Copy</button>
+      <span id="newKeyCopyStatus" style="font-size:12px;color:var(--success);margin-left:8px"></span>
+    </div>` : '';
+
+  const keysTableHtml = keys.length === 0
+    ? '<div class="empty" style="padding:20px 0">No API keys yet.</div>'
+    : `<div style="overflow-x:auto">
+      <table class="apikey-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Key</th>
+            <th>Created</th>
+            <th>Last Used</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${keys.map(k => `
+            <tr>
+              <td><strong>${esc(k.name)}</strong></td>
+              <td class="apikey-masked">${esc(k.masked_key || maskKey(k.key_prefix))}</td>
+              <td style="color:var(--muted);font-size:12px">${esc(fmtTime(k.created_at))}</td>
+              <td style="color:var(--muted);font-size:12px">${k.last_used_at ? esc(fmtTime(k.last_used_at)) : '—'}</td>
+              <td><span class="${k.is_active !== false ? 'apikey-status-active' : 'apikey-status-inactive'}">${k.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+              <td><button class="btn-danger-sm" onclick="deactivateApiKey('${esc(k.id)}', '${esc(k.name)}')">Deactivate</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  main.innerHTML = `
+    <div class="card">
+      <h2>API Keys</h2>
+      ${newKeyHtml}
+      <div style="margin-bottom:20px">
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Create New Key</h3>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="newKeyName" placeholder="Key name (e.g. my-agent)" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;min-width:200px">
+          <button class="btn btn-primary" onclick="createApiKey()">Create</button>
+          <span id="createKeyStatus" style="font-size:13px"></span>
+        </div>
+      </div>
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Your Keys</h3>
+      ${keysTableHtml}
+    </div>`;
+}
+
+function maskKey(prefix) {
+  if (!prefix) return 'amk_****...****';
+  return prefix + '****...****';
+}
+
+function copyNewKey() {
+  const keyEl = document.getElementById('newKeyValue');
+  if (!keyEl) return;
+  navigator.clipboard.writeText(keyEl.textContent).then(() => {
+    const status = document.getElementById('newKeyCopyStatus');
+    if (status) { status.textContent = 'Copied!'; setTimeout(() => { status.textContent = ''; }, 2000); }
+  }).catch(() => {
+    // fallback
+    const range = document.createRange();
+    range.selectNodeContents(keyEl);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+}
+
+async function createApiKey() {
+  const nameInput = document.getElementById('newKeyName');
+  const statusEl = document.getElementById('createKeyStatus');
+  const name = nameInput ? nameInput.value.trim() : '';
+  if (!name) {
+    if (statusEl) { statusEl.textContent = 'Please enter a key name.'; statusEl.style.color = 'var(--danger)'; }
+    return;
+  }
+  try {
+    const result = await api('/users/api-keys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    await renderApiKeys(result);
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+  }
+}
+
+async function deactivateApiKey(keyId, keyName) {
+  const ok = await showConfirm('Deactivate API Key', `Deactivate key "${keyName}"? It will stop working immediately.`, 'Deactivate');
+  if (!ok) return;
+  try {
+    await api(`/users/api-keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' });
+    await renderApiKeys();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+// --- Admin (superadmin) ---
+async function showAdmin() {
+  if (!currentUser?.is_superadmin) return;
+  clearNav();
+  setSidebarSpecialMode('none');
+  document.getElementById('navAdmin').classList.add('active');
+  currentView = { type: 'admin' };
+  await renderAdmin();
+}
+
+async function renderAdmin() {
+  if (currentView?.type !== 'admin') return;
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="empty">Loading...</div>';
+
+  let users = [], inviteCodes = [];
+  try {
+    [users, inviteCodes] = await Promise.all([
+      api('/superadmin/users'),
+      api('/superadmin/invite-codes'),
+    ]);
+  } catch (e) {
+    main.innerHTML = `<div class="card"><p class="empty">Failed to load admin data: ${esc(e.message)}</p></div>`;
+    return;
+  }
+
+  const usersHtml = users.length === 0
+    ? '<div class="empty" style="padding:16px 0">No users.</div>'
+    : `<table class="admin-table">
+        <thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Action</th></tr></thead>
+        <tbody>
+          ${users.map(u => `
+            <tr>
+              <td><strong>${esc(u.username)}</strong></td>
+              <td>${u.is_superadmin ? '<span class="superadmin-badge">Superadmin</span>' : '<span style="color:var(--muted);font-size:12px">User</span>'}</td>
+              <td style="color:var(--muted);font-size:12px">${esc(fmtTime(u.created_at))}</td>
+              <td><button class="btn-sm" onclick="loginAs('${esc(u.id)}', '${esc(u.username)}')">Login As</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+
+  const codesHtml = inviteCodes.length === 0
+    ? '<div class="empty" style="padding:16px 0">No invite codes generated.</div>'
+    : `<table class="admin-table">
+        <thead><tr><th>Code</th><th>Used By</th><th>Created</th></tr></thead>
+        <tbody>
+          ${inviteCodes.map(c => `
+            <tr>
+              <td class="invite-code-mono">${esc(c.code)}</td>
+              <td style="color:var(--muted)">${c.used_by ? esc(c.used_by) : '—'}</td>
+              <td style="color:var(--muted);font-size:12px">${esc(fmtTime(c.created_at))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+
+  main.innerHTML = `
+    <div class="card">
+      <h2>Admin Panel</h2>
+
+      <div class="admin-section">
+        <h3>Users</h3>
+        ${usersHtml}
+      </div>
+
+      <div class="admin-section">
+        <h3>Invite Codes</h3>
+        <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px">
+          <button class="btn btn-primary" onclick="generateInviteCode()">Generate Invite Code</button>
+          <span id="inviteCodeStatus" style="font-size:13px"></span>
+        </div>
+        <div id="inviteCodesTable">${codesHtml}</div>
+      </div>
+    </div>`;
+}
+
+async function generateInviteCode() {
+  const statusEl = document.getElementById('inviteCodeStatus');
+  try {
+    const result = await api('/superadmin/invite-codes', { method: 'POST' });
+    if (statusEl) {
+      statusEl.textContent = 'Generated: ' + (result.code || '');
+      statusEl.style.color = 'var(--success)';
+      setTimeout(() => { statusEl.textContent = ''; }, 5000);
+    }
+    // Refresh the table
+    const codes = await api('/superadmin/invite-codes');
+    const tableEl = document.getElementById('inviteCodesTable');
+    if (tableEl && codes.length > 0) {
+      tableEl.innerHTML = `<table class="admin-table">
+        <thead><tr><th>Code</th><th>Used By</th><th>Created</th></tr></thead>
+        <tbody>
+          ${codes.map(c => `
+            <tr>
+              <td class="invite-code-mono">${esc(c.code)}</td>
+              <td style="color:var(--muted)">${c.used_by ? esc(c.used_by) : '—'}</td>
+              <td style="color:var(--muted);font-size:12px">${esc(fmtTime(c.created_at))}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+    }
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+  }
+}
+
+async function loginAs(userId, username) {
+  const ok = await showConfirm('Login As User', `Switch to acting as "${username}"?`, 'Confirm');
+  if (!ok) return;
+  try {
+    await api(`/superadmin/login-as/${encodeURIComponent(userId)}`, { method: 'POST' });
+    window.location.reload();
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
 // --- Polling ---
 function startPolling() {
   stopPolling();
@@ -1227,9 +1755,7 @@ function stopPolling() {
 document.getElementById('sidebarModeSelect').addEventListener('change', async (e) => {
   sidebarMode = e.target.value;
   filterTags.clear();
-  filterBarOpen = false;
-  document.getElementById('filterToggleBtn')?.classList.remove('active');
-  document.getElementById('filterBar')?.classList.remove('visible');
+  updateFilterBtn();
   clearNav();
   setSidebarSpecialMode('none');
   currentView = null;
@@ -1250,6 +1776,17 @@ document.getElementById('pollSelect').addEventListener('change', (e) => {
     indicator.title = 'Auto-refresh active';
     startPolling();
   }
+});
+
+// Enter key support for login form
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  const loginPage = document.getElementById('loginPage');
+  if (!loginPage.classList.contains('visible')) return;
+  const loginWrap = document.getElementById('loginFormWrap');
+  const regWrap = document.getElementById('registerFormWrap');
+  if (loginWrap.style.display !== 'none') doLogin();
+  else if (regWrap.style.display !== 'none') doRegister();
 });
 
 // --- Helpers ---
@@ -1511,68 +2048,67 @@ function hydrateTagInput() {
 }
 
 // --- Tag filter ---
-function toggleFilterBar() {
-  filterBarOpen = !filterBarOpen;
-  const bar = document.getElementById('filterBar');
-  if (filterBarOpen) {
-    bar.classList.add('visible');
-    renderFilterBar();
-  } else {
-    bar.classList.remove('visible');
-  }
-  updateFilterBtn();
+function openFilterModal() {
+  renderFilterModal();
+  document.getElementById('filterModal').classList.add('visible');
 }
 
-function renderFilterBar() {
-  const bar = document.getElementById('filterBar');
-  if (!bar) return;
+function closeFilterModal() {
+  document.getElementById('filterModal').classList.remove('visible');
+}
+
+function renderFilterModal() {
+  const container = document.getElementById('filterModalTags');
   const allTags = getAllTags();
   if (allTags.length === 0) {
-    bar.innerHTML = '<span style="font-size:11px;color:var(--muted);padding:2px 0">暂无标签</span>';
+    container.innerHTML = '<div class="filter-modal-empty">暂无标签</div>';
     return;
   }
-  const pills = allTags.map(t =>
-    `<button class="filter-tag${filterTags.has(t) ? ' selected' : ''}" data-tag="${esc(t)}" onclick="toggleFilterTag(this.dataset.tag)">${esc(t)}</button>`
+  container.innerHTML = allTags.map(t =>
+    `<button class="filter-modal-tag${filterTags.has(t) ? ' selected' : ''}" data-tag="${esc(t)}" onclick="toggleFilterTag(this.dataset.tag)">${esc(t)}</button>`
   ).join('');
-  const clearBtn = filterTags.size > 0
-    ? '<button class="filter-clear" onclick="clearFilterTags()">清除</button>'
-    : '';
-  bar.innerHTML = pills + clearBtn;
 }
 
 function toggleFilterTag(tag) {
   if (filterTags.has(tag)) filterTags.delete(tag);
   else filterTags.add(tag);
-  renderFilterBar();
+  renderFilterModal();
   updateFilterBtn();
   refreshSidebar();
+  saveFilterTags();
 }
 
 function clearFilterTags() {
   filterTags.clear();
-  renderFilterBar();
+  renderFilterModal();
   updateFilterBtn();
   refreshSidebar();
+  saveFilterTags();
+  closeFilterModal();
+}
+
+function saveFilterTags() {
+  api('/users/me/filter-tags', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ filter_tags: [...filterTags] }),
+  }).catch(() => {});
 }
 
 function updateFilterBtn() {
   const btn = document.getElementById('filterToggleBtn');
   if (!btn) return;
   const n = filterTags.size;
-  const chevron = filterBarOpen ? '▾' : '▸';
   btn.className = 'sidebar-filter-btn' + (n > 0 ? ' active' : '');
-  btn.innerHTML = `<span class="filter-icon">${chevron}</span> 标签过滤${n > 0 ? ` (${n})` : ''}`;
+  btn.innerHTML = `<span class="filter-icon">&#9881;</span> 标签过滤${n > 0 ? ' (' + n + ')' : ''}`;
 }
 
 function updateFilterVisibility() {
   const row = document.getElementById('filterRow');
-  const bar = document.getElementById('filterBar');
   if (sidebarMode === 'agents' && !document.getElementById('sidebarModeSelect').disabled) {
     row.style.display = '';
-    if (filterBarOpen) { bar.classList.add('visible'); renderFilterBar(); }
   } else {
     row.style.display = 'none';
-    bar.classList.remove('visible');
   }
 }
 
@@ -1611,6 +2147,8 @@ document.getElementById('navButtons').addEventListener('click', () => {
 
 // --- Init ---
 (async () => {
+  const authed = await checkAuth();
+  if (!authed) return;
   await refreshSidebar();
   startPolling();
 })();
