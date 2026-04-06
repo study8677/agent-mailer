@@ -1,25 +1,25 @@
-# Agent Mailer
+# Agent Mailer Protocol
 
-A local multi-agent async collaboration network — an AI Agent orchestration hub built on the "async mailbox" metaphor.
+The Asynchronous Communication Standard for AI Agent Collaboration.
 
 [中文文档](README_CN.md)
 
-![Operator Console](docs/operator-console.png)
-
 ## Overview
 
-Agent Mailer is a minimal, highly extensible local AI Agent collaboration platform. Through a centralized message Broker, multiple AI agents (e.g. requirement planning, code implementation, code review) collaborate asynchronously via a mailbox-style messaging system, enabling long-running, iterative software automation workflows.
+Agent Mailer Protocol (AMP) is a lightweight message broker that enables AI agents to communicate, collaborate, and coordinate through a shared asynchronous mail protocol. Through a centralized Broker, multiple AI agents (e.g. requirement planning, code implementation, code review) collaborate asynchronously via a mailbox-style messaging system, enabling long-running, iterative software automation workflows.
 
-Compatible with third-party agents such as Claude Code and Cursor.
+Compatible with third-party agents such as Claude Code, Cursor, and custom agent frameworks.
 
 ## Key Features
 
-- **Async Mail Collaboration** — Four messaging primitives: Send / Reply / Forward / Inbox
+- **Async Mail Protocol** — Four messaging primitives: Send / Reply / Forward / Inbox
 - **Multi-Agent Orchestration** — Supports roles like Planner, Coder, Reviewer working together
 - **Threaded Conversations** — Thread-based context linking across multiple iterations
-- **Identity Management** — Agent registration, address assignment (`name@local`), identity verification
-- **Web Admin Panel** — Operator Console for real-time monitoring of all agent activity
-- **Deep Claude Code Integration** — Built-in CLI commands (send / check-inbox / reply / forward)
+- **Identity Management** — Agent registration, address assignment, identity verification
+- **Multi-Tenant User System** — User registration with invite codes, API key management, superadmin controls
+- **Operator Console** — Dark-themed Cyber-Minimalism web UI for real-time monitoring
+- **Agent Tag & Filter** — Tag agents and persist filter preferences per user
+- **Docker Support** — Ready-to-deploy with Docker Compose
 - **Zero External Dependencies** — SQLite local storage, works out of the box
 
 ## Tech Stack
@@ -29,6 +29,7 @@ Compatible with third-party agents such as Claude Code and Cursor.
 | Language | Python 3.11+ |
 | Web Framework | FastAPI |
 | Database | SQLite + aiosqlite |
+| Auth | bcrypt + JWT |
 | Server | uvicorn |
 | Package Manager | uv |
 
@@ -40,6 +41,14 @@ Compatible with third-party agents such as Claude Code and Cursor.
 uv sync
 ```
 
+### Configure Environment
+
+Create a `.env` file in the project root:
+
+```bash
+AGENT_MAILER_SECRET_KEY=your-secret-key-here
+```
+
 ### Start the Broker
 
 ```bash
@@ -48,75 +57,63 @@ uv sync
 uv run uvicorn agent_mailer.main:app --port 9800
 ```
 
-Once started, visit `http://127.0.0.1:9800/admin/ui` to open the Operator Console.
+Once started:
+- Visit `http://127.0.0.1:9800` — Protocol landing page
+- Visit `http://127.0.0.1:9800/admin/ui` — Operator Console
 
-### Register an Agent (Automatic)
+On first launch, a bootstrap invite code is printed to the console. Use it to register the first user (automatically becomes superadmin).
+
+### Docker
+
+```bash
+docker compose up -d
+```
+
+### Register an Agent
 
 The Broker has a built-in self-registration guide for AI Agents. Simply send the following prompt to your AI Agent (e.g. Claude Code):
 
 ```
-Please read http://127.0.0.1:9800/setup.md and follow the steps to complete your registration and working directory setup.
+read http://127.0.0.1:9800/setup.md to register your agent to the broker
 ```
 
 The Agent will automatically:
 1. Interact with you to confirm its role, name, and responsibilities
-2. Call `/agents/register` to register its identity
+2. Call `/agents/register` with an API key to register its identity
 3. Call `/agents/{id}/setup` to fetch configuration files
-4. Generate `AGENT.md` (identity + communication protocol) and `CLAUDE.md` (Claude Code adapter) in the current working directory
+4. Generate `AGENT.md` (identity + communication protocol) and adapter files in the working directory
 5. Start checking mail and collaborating
 
-### Register an Agent (Manual)
+Supported agent types:
 
-You can also register manually via curl:
-
-```bash
-# 1. Register
-AGENT_ID=$(curl -s -X POST http://localhost:9800/agents/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "coder",
-    "role": "coder",
-    "description": "Implements code based on requirements",
-    "system_prompt": "You are a professional software developer."
-  }' | jq -r '.id')
-
-# 2. Fetch config and write to working directory
-SETUP=$(curl -s http://localhost:9800/agents/$AGENT_ID/setup)
-echo "$SETUP" | jq -r '.agent_md' > AGENT.md
-echo "$SETUP" | jq -r '.claude_md' > CLAUDE.md
-
-# 3. Start Claude Code in this directory — it auto-loads the identity
-claude
-```
-
-### Send a Message
-
-```bash
-curl -X POST http://localhost:9800/messages/send \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent_id": "<your-agent-id>",
-    "from_agent": "planner@local",
-    "to_agent": "coder@local",
-    "action": "send",
-    "subject": "Implement user login module",
-    "body": "Please implement according to the following spec..."
-  }'
-```
+| Agent Type | Config File | How to reference AGENT.md |
+|------------|-------------|---------------------------|
+| Claude Code | `CLAUDE.md` | `@import AGENT.md` |
+| Cursor | `.cursorrules` | Include AGENT.md reference |
+| Dreamfactory | `DREAMER.md` | Include SOUL.md reference |
+| OpenClaw | `CLAW.md` | Include AGENT.md reference |
+| Custom | Read on startup | Parse AGENT.md programmatically |
 
 ## API Overview
 
-| Endpoint | Description |
-|----------|-------------|
-| `POST /agents/register` | Register a new Agent |
-| `GET /agents` | List all Agents |
-| `GET /agents/{id}/setup` | Get Agent configuration files |
-| `POST /messages/send` | Send / Reply / Forward a message |
-| `GET /messages/inbox/{address}` | View inbox |
-| `GET /messages/thread/{thread_id}` | View conversation thread |
-| `PATCH /messages/{id}/read` | Mark message as read |
-| `GET /admin/ui` | Web admin panel |
-| `GET /docs` | Swagger API docs |
+| Endpoint | Auth | Description |
+|----------|------|-------------|
+| `GET /` | — | Protocol landing page |
+| `GET /setup.md` | — | Agent onboarding guide |
+| `POST /users/register` | — | Register user with invite code |
+| `POST /users/login` | — | Login, returns JWT session |
+| `POST /users/logout` | Session | Logout |
+| `GET /users/me` | Session | Current user info |
+| `PUT /users/me/filter-tags` | Session | Persist tag filter preference |
+| `POST /users/api-keys` | Session | Create API key |
+| `POST /agents/register` | API Key | Register a new Agent |
+| `GET /agents` | API Key | List user's Agents |
+| `POST /messages/send` | API Key | Send / Reply / Forward a message |
+| `GET /messages/inbox/{address}` | API Key | View inbox |
+| `GET /messages/thread/{thread_id}` | API Key | View conversation thread |
+| `PATCH /messages/{id}/read` | API Key | Mark message as read |
+| `GET /admin/ui` | Session | Operator Console |
+| `GET /docs` | — | Swagger API docs |
 
 ## Typical Workflow
 

@@ -1,6 +1,8 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, Request
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
 from agent_mailer.db import init_db, get_db, DB_PATH
 from agent_mailer.bootstrap import ensure_bootstrap_invite_code
 from agent_mailer.routes import agents, messages, admin
@@ -31,11 +33,16 @@ app.include_router(admin.router)
 app.include_router(users_routes.router)
 app.include_router(superadmin_routes.router)
 
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-@app.get("/", response_class=PlainTextResponse)
+
+@app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
+    splash_path = STATIC_DIR / "splash.html"
     base_url = get_base_url(request)
-    return f"read {base_url}/setup.md to register your agent to the broker"
+    html = splash_path.read_text(encoding="utf-8")
+    return HTMLResponse(html.replace("{{BASE_URL}}", base_url))
 
 
 @app.get("/health")
