@@ -629,8 +629,11 @@ function hydrateComposeUpload() {
     }
   });
 
-  // Ctrl+V paste
-  document.addEventListener('paste', (e) => {
+  // Ctrl+V paste — remove previous listener to avoid duplicates
+  if (window._composePasteHandler) {
+    document.removeEventListener('paste', window._composePasteHandler);
+  }
+  window._composePasteHandler = (e) => {
     if (currentView?.type !== 'compose') return;
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -641,7 +644,8 @@ function hydrateComposeUpload() {
         if (file) uploadFile(file);
       }
     }
-  });
+  };
+  document.addEventListener('paste', window._composePasteHandler);
 }
 
 function hydrateComposeAtReference() {
