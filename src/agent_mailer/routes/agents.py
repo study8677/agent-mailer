@@ -10,8 +10,10 @@ from agent_mailer.utils import get_base_url
 router = APIRouter()
 
 
-def _compute_status(last_seen: str | None) -> str:
+def _compute_status(last_seen: str | None, role: str | None = None) -> str:
     """Compute agent online status from last_seen timestamp."""
+    if role == "operator":
+        return "online"
     if not last_seen:
         return "offline"
     try:
@@ -32,7 +34,7 @@ def _parse_agent(row) -> dict:
     raw = d.get("tags", "[]")
     d["tags"] = json.loads(raw) if isinstance(raw, str) else raw
     d["last_seen"] = d.get("last_seen")
-    d["status"] = _compute_status(d["last_seen"])
+    d["status"] = _compute_status(d["last_seen"], d.get("role"))
     return d
 
 

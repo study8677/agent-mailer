@@ -228,7 +228,7 @@ async def agents_stats(request: Request, user: dict = Depends(get_current_user))
         d = dict(row)
         raw = d.pop("tags", "[]")
         d["tags"] = json.loads(raw) if isinstance(raw, str) else raw
-        d["status"] = _compute_status(d.get("last_seen"))
+        d["status"] = _compute_status(d.get("last_seen"), d.get("role"))
         result.append(AgentStats(**d))
     return result
 
