@@ -377,6 +377,11 @@ async def init_db(db):
     if database_url:
         for stmt in PG_SCHEMA:
             await db.execute(stmt.strip())
+        # Additive migrations for existing PG databases
+        await _add_column_if_missing(db, "agents", "tags", "TEXT NOT NULL DEFAULT '[]'")
+        await _add_column_if_missing(db, "agents", "user_id", "TEXT")
+        await _add_column_if_missing(db, "agents", "last_seen", "TEXT")
+        await _add_column_if_missing(db, "users", "filter_tags", "TEXT NOT NULL DEFAULT '[]'")
     else:
         await db.executescript(SCHEMA)
         await db.executescript(ARCHIVED_THREADS_SCHEMA)
