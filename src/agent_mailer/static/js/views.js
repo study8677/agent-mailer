@@ -888,7 +888,7 @@ async function renderStats() {
       <table class="stats-table">
         <thead>
           <tr>
-            <th>Name</th><th>Address</th><th>Role</th>
+            <th>Name</th><th>Status</th><th>Address</th><th>Role</th>
             <th class="stat-num">Received</th><th class="stat-num">Read</th><th class="stat-num">Unread</th>
             <th class="stat-num">Sent</th><th class="stat-num">Replied</th><th class="stat-num">Forwarded</th>
           </tr>
@@ -897,6 +897,7 @@ async function renderStats() {
           ${statsData.map(a => `
             <tr>
               <td><strong>${esc(a.name)}</strong></td>
+              <td><span class="status-dot status-${a.status || 'offline'}"></span>${a.status === 'online' ? '在线' : a.status === 'idle' ? '空闲' : '离线'}</td>
               <td style="color:var(--muted)">${esc(a.address)}</td>
               <td>${esc(a.role)}</td>
               <td class="stat-num">${a.messages_received}</td>

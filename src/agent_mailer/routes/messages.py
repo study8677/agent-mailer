@@ -142,6 +142,11 @@ async def inbox(
     # verify caller identity: agent_id must own this address and belong to user
     await _verify_identity(db, agent_id, address, user["id"])
 
+    # update last_seen heartbeat
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute("UPDATE agents SET last_seen = ? WHERE id = ?", (now, agent_id))
+    await db.commit()
+
     vis = INBOX_VISIBILITY_SQL
     if all:
         cursor = await db.execute(

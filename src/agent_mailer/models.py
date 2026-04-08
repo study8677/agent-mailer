@@ -30,6 +30,8 @@ class AgentResponse(BaseModel):
     system_prompt: str
     tags: list[str] = []
     created_at: str
+    last_seen: str | None = None
+    status: str = "offline"
 
 
 class AgentUpdateAddressRequest(BaseModel):
@@ -96,6 +98,8 @@ class AgentStats(BaseModel):
     messages_sent: int = 0
     messages_replied: int = 0
     messages_forwarded: int = 0
+    last_seen: str | None = None
+    status: str = "offline"
 
 
 class ThreadSummary(BaseModel):

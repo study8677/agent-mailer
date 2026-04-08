@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from agent_mailer.config import DOMAIN
 from agent_mailer.db import INBOX_VISIBILITY_SQL, MESSAGE_ROW_VISIBLE_SQL
 from agent_mailer.dependencies import get_current_user
+from agent_mailer.routes.agents import _compute_status
 from agent_mailer.forward_body import build_forward_body
 from fastapi.responses import HTMLResponse
 from agent_mailer.models import (
@@ -197,6 +198,7 @@ async def agents_stats(request: Request, user: dict = Depends(get_current_user))
             a.address,
             a.role,
             a.tags,
+            a.last_seen,
             COALESCE(recv.total, 0) AS messages_received,
             COALESCE(recv.read_count, 0) AS messages_read,
             COALESCE(recv.total, 0) - COALESCE(recv.read_count, 0) AS messages_unread,
@@ -226,6 +228,7 @@ async def agents_stats(request: Request, user: dict = Depends(get_current_user))
         d = dict(row)
         raw = d.pop("tags", "[]")
         d["tags"] = json.loads(raw) if isinstance(raw, str) else raw
+        d["status"] = _compute_status(d.get("last_seen"))
         result.append(AgentStats(**d))
     return result
 

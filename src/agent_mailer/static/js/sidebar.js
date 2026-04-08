@@ -128,7 +128,7 @@ async function refreshSidebar() {
     <div class="agent-item ${a.address === activeAddr ? 'active' : ''}"
          onclick='showInbox(${JSON.stringify(a.address)}, ${JSON.stringify(a.agent_id)})'>
       <div class="agent-info">
-        <div class="agent-name">${esc(a.name)}</div>
+        <div class="agent-name"><span class="status-dot status-${a.status || 'offline'}" title="${a.status === 'online' ? '在线' : a.status === 'idle' ? '空闲' : '离线'}"></span>${esc(a.name)}</div>
         <div class="agent-role">${esc(a.role)} &middot; ${esc(a.address)}</div>
         ${tagsHtml}
       </div>

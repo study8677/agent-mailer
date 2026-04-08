@@ -10,11 +10,29 @@ from agent_mailer.utils import get_base_url
 router = APIRouter()
 
 
+def _compute_status(last_seen: str | None) -> str:
+    """Compute agent online status from last_seen timestamp."""
+    if not last_seen:
+        return "offline"
+    try:
+        seen = datetime.fromisoformat(last_seen)
+        delta = (datetime.now(timezone.utc) - seen).total_seconds()
+        if delta <= 60:
+            return "online"
+        elif delta <= 300:
+            return "idle"
+        return "offline"
+    except (ValueError, TypeError):
+        return "offline"
+
+
 def _parse_agent(row) -> dict:
     """Convert a DB row to a dict with tags parsed from JSON string to list."""
     d = dict(row)
     raw = d.get("tags", "[]")
     d["tags"] = json.loads(raw) if isinstance(raw, str) else raw
+    d["last_seen"] = d.get("last_seen")
+    d["status"] = _compute_status(d["last_seen"])
     return d
 
 

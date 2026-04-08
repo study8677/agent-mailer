@@ -20,7 +20,8 @@ PG_SCHEMA = [
         system_prompt TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL,
         tags TEXT NOT NULL DEFAULT '[]',
-        user_id TEXT
+        user_id TEXT,
+        last_seen TEXT
     )
     """,
     """
@@ -387,5 +388,6 @@ async def init_db(db):
         await db.executescript(FILES_SCHEMA)
         await _add_column_if_missing(db, "agents", "tags", "TEXT NOT NULL DEFAULT '[]'")
         await _add_column_if_missing(db, "agents", "user_id", "TEXT")
+        await _add_column_if_missing(db, "agents", "last_seen", "TEXT")
         await _add_column_if_missing(db, "users", "filter_tags", "TEXT NOT NULL DEFAULT '[]'")
     await db.commit()
