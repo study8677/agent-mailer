@@ -922,7 +922,8 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId, originalB
     ? 'Optional note (appears above forwarded content)...'
     : 'Write your message...';
 
-  const container = document.getElementById('composeModalContent');
+  currentView = { type: 'compose' };
+  const container = document.getElementById('main');
   container.innerHTML = `
     <div class="card">
       <h2>${title}</h2>
@@ -963,12 +964,10 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId, originalB
         <input type="hidden" id="composeMode" value="${esc(mode)}">
         <div style="display:flex;gap:12px;align-items:center">
           <button class="btn btn-primary" id="sendBtn" onclick="doSend()">Send</button>
-          <button class="btn btn-secondary" onclick="closeComposeModal()">Cancel</button>
           <div id="composeStatus"></div>
         </div>
       </div>
     </div>`;
-  document.getElementById('composeModal').classList.add('visible');
   hydrateMarkdownBodies(container);
   hydrateComposeToInput();
   hydrateComposeUpload();
@@ -1064,7 +1063,7 @@ function hydrateComposeUpload() {
     document.removeEventListener('paste', window._composePasteHandler);
   }
   window._composePasteHandler = (e) => {
-    if (!document.getElementById('composeModal')?.classList.contains('visible')) return;
+    if (currentView?.type !== 'compose') return;
     const items = e.clipboardData?.items;
     if (!items) return;
     for (const item of items) {
@@ -1286,7 +1285,9 @@ async function doSend() {
     });
     status.className = 'compose-status success';
     status.textContent = 'Message sent!';
-    setTimeout(() => closeComposeModal(), 800);
+    document.getElementById('composeBody').value = '';
+    document.getElementById('composeSubject').value = '';
+    document.getElementById('composeParentId').value = '';
     await refreshSidebar();
   } catch (e) {
     status.className = 'compose-status error';
