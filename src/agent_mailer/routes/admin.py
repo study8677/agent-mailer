@@ -482,7 +482,7 @@ async def purge_thread(thread_id: str, request: Request, user: dict = Depends(ge
 @router.get("/messages/inbox/{address}")
 async def admin_inbox(
     address: str, request: Request, all: bool = False,
-    page: int | None = None, page_size: int = 20,
+    page: int | None = Query(default=None, ge=1), page_size: int = Query(default=20, ge=1, le=100),
     user: dict = Depends(get_current_user),
 ):
     db = request.app.state.db

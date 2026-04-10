@@ -136,7 +136,7 @@ async def send_message(
 @router.get("/messages/inbox/{address}")
 async def inbox(
     address: str, request: Request, agent_id: str = Query(...),
-    all: bool = False, page: int | None = None, page_size: int = 20,
+    all: bool = False, page: int | None = Query(default=None, ge=1), page_size: int = Query(default=20, ge=1, le=100),
     user: dict = Depends(get_api_key_user),
 ):
     db = request.app.state.db
