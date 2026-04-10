@@ -13,7 +13,7 @@ async function renderArchiveMain() {
   await fetchThreadsSummary({ archived: true });
   const main = document.getElementById('main');
   if (threadsData.length === 0) {
-    main.innerHTML = '<div class="card"><h2>Archive</h2><div class="empty">No archived threads.</div></div>';
+    main.innerHTML = '<div class="card"><h2>Archive</h2><p class="empty" style="padding:24px 0;text-align:center">No archived threads. Archived threads will appear here.</p></div>';
     return;
   }
   main.innerHTML = `
@@ -49,7 +49,7 @@ async function renderTrashMain() {
   await fetchTrashedMessages();
   const main = document.getElementById('main');
   if (threadsData.length === 0 && trashedMessagesData.length === 0) {
-    main.innerHTML = '<div class="card"><h2>Trash</h2><div class="empty">Trash is empty.</div></div>';
+    main.innerHTML = '<div class="card"><h2>Trash</h2><p class="empty" style="padding:24px 0;text-align:center">Trash is empty. Deleted threads and messages will appear here.</p></div>';
     return;
   }
   const threadsHtml = threadsData.length === 0
