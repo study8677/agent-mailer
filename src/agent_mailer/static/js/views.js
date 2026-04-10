@@ -5,13 +5,24 @@ async function showArchive() {
   document.getElementById('navArchive').classList.add('active');
   setSidebarSpecialMode('none');
   currentView = { type: 'archive' };
-  await renderArchiveMain();
+  document.getElementById('main').innerHTML = '<div class="card"><h2>Archive</h2><p>Loading...</p></div>';
+  try {
+    await renderArchiveMain();
+  } catch (e) {
+    document.getElementById('main').innerHTML = '<div class="card"><h2>Archive</h2><p class="empty">Error: ' + (e.message || e) + '</p></div>';
+    console.error('showArchive error:', e);
+  }
 }
 
 async function renderArchiveMain() {
   if (currentView?.type !== 'archive') return;
-  await fetchThreadsSummary({ archived: true });
   const main = document.getElementById('main');
+  try {
+    await fetchThreadsSummary({ archived: true });
+  } catch (e) {
+    main.innerHTML = '<div class="card"><h2>Archive</h2><p class="empty">Failed to load: ' + esc(e.message) + '</p></div>';
+    return;
+  }
   if (threadsData.length === 0) {
     main.innerHTML = '<div class="card"><h2>Archive</h2><p class="empty" style="padding:24px 0;text-align:center">No archived threads. Archived threads will appear here.</p></div>';
     return;
@@ -40,14 +51,25 @@ async function showTrash() {
   document.getElementById('navTrash').classList.add('active');
   setSidebarSpecialMode('none');
   currentView = { type: 'trash' };
-  await renderTrashMain();
+  document.getElementById('main').innerHTML = '<div class="card"><h2>Trash</h2><p>Loading...</p></div>';
+  try {
+    await renderTrashMain();
+  } catch (e) {
+    document.getElementById('main').innerHTML = '<div class="card"><h2>Trash</h2><p class="empty">Error: ' + (e.message || e) + '</p></div>';
+    console.error('showTrash error:', e);
+  }
 }
 
 async function renderTrashMain() {
   if (currentView?.type !== 'trash') return;
-  await fetchThreadsSummary({ trashed: true });
-  await fetchTrashedMessages();
   const main = document.getElementById('main');
+  try {
+    await fetchThreadsSummary({ trashed: true });
+    await fetchTrashedMessages();
+  } catch (e) {
+    main.innerHTML = '<div class="card"><h2>Trash</h2><p class="empty">Failed to load trash data: ' + esc(e.message) + '</p></div>';
+    return;
+  }
   if (threadsData.length === 0 && trashedMessagesData.length === 0) {
     main.innerHTML = '<div class="card"><h2>Trash</h2><p class="empty" style="padding:24px 0;text-align:center">Trash is empty. Deleted threads and messages will appear here.</p></div>';
     return;
