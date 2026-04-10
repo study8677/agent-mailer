@@ -61,6 +61,7 @@ async function renderTeams() {
 }
 
 function showCreateTeamForm() {
+  currentView = { type: 'teamCreate' };
   const main = document.getElementById('main');
   main.innerHTML = `
     <div class="card">
@@ -198,6 +199,7 @@ async function renderTeamDetail(teamId) {
 }
 
 async function showEditTeamForm(teamId) {
+  currentView = { type: 'teamEdit', teamId };
   let team;
   try {
     team = await fetchTeamDetail(teamId);
