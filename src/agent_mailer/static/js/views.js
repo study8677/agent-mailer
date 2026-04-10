@@ -34,7 +34,7 @@ async function renderArchiveMain() {
       <table class="stats-table">
         <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Last Activity</th></tr></thead>
         <tbody>${threadsData.map(t => `
-          <tr style="cursor:pointer" onclick="showThreadFromSidebar('${esc(t.thread_id)}', 'archive')">
+          <tr style="cursor:pointer" onclick="showArchiveThread('${esc(t.thread_id)}')">
             <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
             <td class="stat-num">${t.message_count}</td>
             <td class="stat-num">${t.unread_count}</td>
@@ -80,7 +80,7 @@ async function renderTrashMain() {
       <table class="stats-table">
         <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Trashed At</th></tr></thead>
         <tbody>${threadsData.map(t => `
-          <tr style="cursor:pointer" onclick="showThreadFromSidebar('${esc(t.thread_id)}', 'trash')">
+          <tr style="cursor:pointer" onclick="showTrashThread('${esc(t.thread_id)}')">
             <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
             <td class="stat-num">${t.message_count}</td>
             <td class="stat-num">${t.unread_count}</td>
@@ -95,7 +95,7 @@ async function renderTrashMain() {
       <table class="stats-table">
         <thead><tr><th>Subject</th><th>From</th><th>Trashed At</th></tr></thead>
         <tbody>${trashedMessagesData.map(tm => `
-          <tr style="cursor:pointer" onclick="showTrashedMessageFromTrash('${esc(tm.message_id)}')">
+          <tr style="cursor:pointer" onclick="showTrashMessage('${esc(tm.message_id)}')">
             <td><strong>${esc(tm.subject) || '(no subject)'}</strong></td>
             <td style="color:var(--muted)">${esc(tm.from_agent)}</td>
             <td style="color:var(--muted)">${esc(fmtTime(tm.trashed_at))}</td>
@@ -113,10 +113,68 @@ async function renderTrashMain() {
     </div>`;
 }
 
+async function showTrashThread(threadId) {
+  currentView = { type: 'trashThread', threadId };
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="card"><p>Loading...</p></div>';
+  try {
+    const msgs = await fetchThread(threadId);
+    main.innerHTML = `
+      <div class="card">
+        <button type="button" class="back-btn" onclick="showTrash()">&larr; Back to Trash</button>
+        <h2>Thread</h2>
+        ${msgs.map(m => `
+          <div class="thread-msg">
+            <div class="thread-meta">
+              <strong>${esc(m.from_agent)}</strong> &rarr; ${esc(m.to_agent)}
+              <span class="msg-action-tag ${m.action}">${m.action}</span>
+              <span style="margin-left:8px;color:var(--muted)">${esc(fmtTime(m.created_at))}</span>
+            </div>
+            ${m.subject ? `<div class="thread-subject-line${humanSubjectClass(m.from_agent)}">${esc(m.subject)}</div>` : ''}
+            <div class="thread-body markdown-body" data-md-html="${mdDataAttr(m.body_html)}"></div>
+          </div>
+        `).join('')}
+      </div>`;
+    hydrateMarkdownBodies(main);
+  } catch (e) {
+    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showTrash()">&larr; Back to Trash</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
+  }
+}
+
+async function showTrashMessage(messageId) {
+  currentView = { type: 'trashMessage', messageId };
+  await renderTrashedMessageView();
+}
+
+async function showArchiveThread(threadId) {
+  currentView = { type: 'archiveThread', threadId };
+  const main = document.getElementById('main');
+  main.innerHTML = '<div class="card"><p>Loading...</p></div>';
+  try {
+    const msgs = await fetchThread(threadId);
+    main.innerHTML = `
+      <div class="card">
+        <button type="button" class="back-btn" onclick="showArchive()">&larr; Back to Archive</button>
+        <h2>Thread</h2>
+        ${msgs.map(m => `
+          <div class="thread-msg">
+            <div class="thread-meta">
+              <strong>${esc(m.from_agent)}</strong> &rarr; ${esc(m.to_agent)}
+              <span class="msg-action-tag ${m.action}">${m.action}</span>
+              <span style="margin-left:8px;color:var(--muted)">${esc(fmtTime(m.created_at))}</span>
+            </div>
+            ${m.subject ? `<div class="thread-subject-line${humanSubjectClass(m.from_agent)}">${esc(m.subject)}</div>` : ''}
+            <div class="thread-body markdown-body" data-md-html="${mdDataAttr(m.body_html)}"></div>
+          </div>
+        `).join('')}
+      </div>`;
+    hydrateMarkdownBodies(main);
+  } catch (e) {
+    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showArchive()">&larr; Back to Archive</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
+  }
+}
+
 async function showTrashedMessageFromTrash(messageId) {
-  clearNav();
-  document.getElementById('navTrash').classList.add('active');
-  setSidebarSpecialMode('none');
   currentView = { type: 'trashedMessage', messageId };
   await renderTrashedMessageView();
 }
