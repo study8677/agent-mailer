@@ -472,10 +472,6 @@ function threadBackToSidebarList() {
 async function showCompose(prefillTo, prefillSubject, prefillParentId, originalBody, originalBodyHtml, options) {
   options = options || {};
   const mode = options.mode != null ? options.mode : (prefillParentId ? 'reply' : 'send');
-  clearNav();
-  setSidebarSpecialMode('none');
-  document.getElementById('navCompose').classList.add('active');
-  currentView = { type: 'compose' };
 
   if (agents.length === 0) await fetchAgents();
 
@@ -501,8 +497,8 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId, originalB
     ? 'Optional note (appears above forwarded content)...'
     : 'Write your message...';
 
-  const main = document.getElementById('main');
-  main.innerHTML = `
+  const container = document.getElementById('composeModalContent');
+  container.innerHTML = `
     <div class="card">
       <h2>${title}</h2>
       <div class="compose-form">
@@ -542,14 +538,21 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId, originalB
         <input type="hidden" id="composeMode" value="${esc(mode)}">
         <div style="display:flex;gap:12px;align-items:center">
           <button class="btn btn-primary" id="sendBtn" onclick="doSend()">Send</button>
+          <button class="btn btn-secondary" onclick="closeComposeModal()">Cancel</button>
           <div id="composeStatus"></div>
         </div>
       </div>
     </div>`;
-  hydrateMarkdownBodies(main);
+  document.getElementById('composeModal').classList.add('visible');
+  hydrateMarkdownBodies(container);
   hydrateComposeToInput();
   hydrateComposeUpload();
   hydrateComposeAtReference();
+}
+
+function closeComposeModal() {
+  document.getElementById('composeModal').classList.remove('visible');
+  document.getElementById('composeModalContent').innerHTML = '';
 }
 
 // --- Compose upload state ---
@@ -634,7 +637,7 @@ function hydrateComposeUpload() {
     document.removeEventListener('paste', window._composePasteHandler);
   }
   window._composePasteHandler = (e) => {
-    if (currentView?.type !== 'compose') return;
+    if (!document.getElementById('composeModal')?.classList.contains('visible')) return;
     const items = e.clipboardData?.items;
     if (!items) return;
     for (const item of items) {
@@ -851,9 +854,7 @@ async function doSend() {
     });
     status.className = 'compose-status success';
     status.textContent = 'Message sent!';
-    document.getElementById('composeBody').value = '';
-    document.getElementById('composeSubject').value = '';
-    document.getElementById('composeParentId').value = '';
+    setTimeout(() => closeComposeModal(), 800);
     await refreshSidebar();
   } catch (e) {
     status.className = 'compose-status error';

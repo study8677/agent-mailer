@@ -461,3 +461,8 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 .sidebar-team-header-name { flex: 1; }
 .sidebar-team-header-count { color: var(--muted); font-weight: 400; font-size: 11px; }
 .sidebar-agent-indented { padding-left: 32px; }
+
+/* Compose Modal */
+.compose-modal-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; width: 90%; max-width: 700px; max-height: 90vh; overflow-y: auto; position: relative; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+.compose-modal-close { position: absolute; top: 12px; right: 12px; background: none; border: none; color: var(--text-dim); font-size: 24px; cursor: pointer; padding: 4px 8px; border-radius: 4px; z-index: 1; }
+.compose-modal-close:hover { color: var(--text); background: var(--sidebar-hover); }
