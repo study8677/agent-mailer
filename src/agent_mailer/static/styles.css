@@ -404,9 +404,11 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
     z-index: 100;
     gap: 0;
   }
-  .nav-btn { flex: 1; text-align: center; font-size: 11px; padding: 12px 4px; border-radius: 0; flex-direction: column; gap: 4px; justify-content: center; }
-  .nav-icon { width: 16px; height: 16px; min-width: 16px; min-height: 16px; max-width: 16px; max-height: 16px; }
-  .main { padding-bottom: 64px; }
+  .nav-btn { flex: 1; text-align: center; font-size: 9px; padding: 6px 2px; border-radius: 0; flex-direction: column; gap: 2px; justify-content: center; }
+  .nav-icon { width: 14px; height: 14px; min-width: 14px; min-height: 14px; max-width: 14px; max-height: 14px; }
+  .nav-toggle { padding: 3px 0; }
+  .nav-toggle svg { width: 10px; height: 10px; }
+  .main { padding-bottom: 48px; }
   .agent-list { padding-bottom: 0; }
   .agent-delete-btn { opacity: 0.6; font-size: 20px; padding: 6px 10px; }
   .msg-item { padding: 14px 12px; }
