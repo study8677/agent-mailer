@@ -238,6 +238,7 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 .stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .stats-table th { text-align: left; padding: 10px 12px; background: var(--surface); border-bottom: 1px solid var(--border); font-weight: 500; color: var(--text-dim); font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
 .stats-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-subtle); color: var(--text-dim); }
+.stats-table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
 .stats-table tr:hover td { background: rgba(124,58,237,0.04); }
 .stat-num { font-variant-numeric: tabular-nums; text-align: right; font-family: var(--mono); }
 
