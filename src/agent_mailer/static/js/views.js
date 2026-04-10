@@ -1,3 +1,20 @@
+function _paginateList(items, page, pageSize) {
+  pageSize = pageSize || 20;
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const start = (page - 1) * pageSize;
+  return { items: items.slice(start, start + pageSize), total, page, totalPages };
+}
+
+function _paginationHtml(page, totalPages, total, onClickFn) {
+  if (totalPages <= 1) return '';
+  return `<div class="pagination">
+    <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="${onClickFn}(${page - 1})">&laquo; Prev</button>
+    <span class="pagination-info">Page ${page} / ${totalPages} (${total} total)</span>
+    <button class="btn btn-secondary pagination-btn" ${page >= totalPages ? 'disabled' : ''} onclick="${onClickFn}(${page + 1})">Next &raquo;</button>
+  </div>`;
+}
+
 // --- Image preview ---
 
 function previewImage(url, filename) {
@@ -17,11 +34,11 @@ function previewImage(url, filename) {
 
 // --- Threads view ---
 
-async function showThreads() {
+async function showThreads(page) {
   clearNav();
   document.getElementById('navThreads').classList.add('active');
   setSidebarSpecialMode('none');
-  currentView = { type: 'threads' };
+  currentView = { type: 'threads', page: page || 1 };
   document.getElementById('main').innerHTML = '<div class="card"><h2>Threads</h2><p>Loading...</p></div>';
   try {
     await renderThreadsMain();
@@ -43,13 +60,14 @@ async function renderThreadsMain() {
     main.innerHTML = '<div class="card"><h2>Threads</h2><p class="empty" style="padding:24px 0;text-align:center">No threads yet.</p></div>';
     return;
   }
+  const pg = _paginateList(threadsData, currentView.page || 1);
   main.innerHTML = `
     <div class="card">
       <h2>Threads</h2>
       <div class="stats-table-wrap">
       <table class="stats-table">
         <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Last Activity</th></tr></thead>
-        <tbody>${threadsData.map(t => `
+        <tbody>${pg.items.map(t => `
           <tr style="cursor:pointer" onclick="showThreadsThread('${esc(t.thread_id)}')">
             <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
             <td class="stat-num">${t.message_count}</td>
@@ -59,6 +77,7 @@ async function renderThreadsMain() {
         `).join('')}</tbody>
       </table>
       </div>
+      ${_paginationHtml(pg.page, pg.totalPages, pg.total, 'showThreads')}
     </div>`;
 }
 
@@ -68,25 +87,37 @@ async function showThreadsThread(threadId) {
   main.innerHTML = '<div class="card"><p>Loading...</p></div>';
   try {
     const msgs = await fetchThread(threadId);
-    main.innerHTML = _renderThreadDetail(msgs, threadId, 'showThreads()');
+    main.innerHTML = _renderThreadDetail(msgs, threadId, 'showThreads()', 'threads');
     hydrateMarkdownBodies(main);
   } catch (e) {
     main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showThreads()">&larr; Back</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
   }
 }
 
-function _renderThreadDetail(msgs, threadId, backFn) {
+function _renderThreadDetail(msgs, threadId, backFn, context) {
+  context = context || 'threads';
   const lastMsg = msgs[msgs.length - 1];
+  let actionsHtml = '';
+  if (context === 'threads') {
+    actionsHtml = `
+      <button class="btn btn-secondary" onclick="showCompose('${esc(lastMsg.from_agent)}', 'Re: ${esc(lastMsg.subject)}', '${esc(lastMsg.id)}', ${JSON.stringify(lastMsg.body)}, ${JSON.stringify(lastMsg.body_html)}, {mode:'reply'})">Reply</button>
+      <button class="btn btn-secondary" onclick="showCompose('', 'Fwd: ${esc(lastMsg.subject)}', '${esc(lastMsg.id)}', null, null, {mode:'forward'})">Forward</button>
+      <button class="btn btn-secondary" onclick="archiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">Archive</button>
+      <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">Delete</button>`;
+  } else if (context === 'archive') {
+    actionsHtml = `
+      <button class="btn btn-secondary" onclick="unarchiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">UnArchive</button>
+      <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">Delete</button>`;
+  } else if (context === 'trash') {
+    actionsHtml = `
+      <button class="btn btn-secondary" onclick="restoreThreadAction('${esc(threadId)}', '${esc(backFn)}')">Restore</button>
+      <button class="btn btn-danger" onclick="purgeThreadAction('${esc(threadId)}', '${esc(backFn)}')">Permanent Delete</button>`;
+  }
   return `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
         <button type="button" class="back-btn" onclick="${backFn}">&larr; Back</button>
-        <div class="thread-actions" style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-secondary" onclick="showCompose('${esc(lastMsg.from_agent)}', 'Re: ${esc(lastMsg.subject)}', '${esc(lastMsg.id)}', null, null, {mode:'reply'})">Reply</button>
-          <button class="btn btn-secondary" onclick="showCompose('', 'Fwd: ${esc(lastMsg.subject)}', '${esc(lastMsg.id)}', null, null, {mode:'forward'})">Forward</button>
-          <button class="btn btn-secondary" onclick="archiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">Archive</button>
-          <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">Delete</button>
-        </div>
+        <div class="thread-actions" style="display:flex;gap:8px;flex-wrap:wrap">${actionsHtml}</div>
       </div>
       <h2>Thread</h2>
       ${msgs.map(m => `
@@ -111,6 +142,30 @@ async function archiveThreadAction(threadId, backFn) {
   } catch (e) { alert(e.message); }
 }
 
+async function unarchiveThreadAction(threadId, backFn) {
+  if (!await showConfirm('UnArchive Thread', 'Restore this thread from archive?', 'UnArchive')) return;
+  try {
+    await api(`/admin/threads/${encodeURIComponent(threadId)}/unarchive`, { method: 'POST' });
+    eval(backFn);
+  } catch (e) { alert(e.message); }
+}
+
+async function restoreThreadAction(threadId, backFn) {
+  if (!await showConfirm('Restore Thread', 'Restore this thread from trash?', 'Restore')) return;
+  try {
+    await api(`/admin/threads/${encodeURIComponent(threadId)}/restore`, { method: 'POST' });
+    eval(backFn);
+  } catch (e) { alert(e.message); }
+}
+
+async function purgeThreadAction(threadId, backFn) {
+  if (!await showConfirm('Permanent Delete', 'Permanently delete this thread? This cannot be undone.', 'Delete Forever')) return;
+  try {
+    await api(`/admin/threads/${encodeURIComponent(threadId)}/purge`, { method: 'POST' });
+    eval(backFn);
+  } catch (e) { alert(e.message); }
+}
+
 async function trashThreadAction(threadId, backFn) {
   if (!await showConfirm('Delete Thread', 'Move this thread to trash?', 'Delete')) return;
   try {
@@ -121,11 +176,11 @@ async function trashThreadAction(threadId, backFn) {
 
 // --- Archive & Trash views ---
 
-async function showArchive() {
+async function showArchive(page) {
   clearNav();
   document.getElementById('navArchive').classList.add('active');
   setSidebarSpecialMode('none');
-  currentView = { type: 'archive' };
+  currentView = { type: 'archive', page: page || 1 };
   document.getElementById('main').innerHTML = '<div class="card"><h2>Archive</h2><p>Loading...</p></div>';
   try {
     await renderArchiveMain();
@@ -148,13 +203,14 @@ async function renderArchiveMain() {
     main.innerHTML = '<div class="card"><h2>Archive</h2><p class="empty" style="padding:24px 0;text-align:center">No archived threads. Archived threads will appear here.</p></div>';
     return;
   }
+  const pg = _paginateList(threadsData, currentView.page || 1);
   main.innerHTML = `
     <div class="card">
       <h2>Archive</h2>
       <div class="stats-table-wrap">
       <table class="stats-table">
         <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Last Activity</th></tr></thead>
-        <tbody>${threadsData.map(t => `
+        <tbody>${pg.items.map(t => `
           <tr style="cursor:pointer" onclick="showArchiveThread('${esc(t.thread_id)}')">
             <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
             <td class="stat-num">${t.message_count}</td>
@@ -164,6 +220,7 @@ async function renderArchiveMain() {
         `).join('')}</tbody>
       </table>
       </div>
+      ${_paginationHtml(pg.page, pg.totalPages, pg.total, 'showArchive')}
     </div>`;
 }
 
@@ -226,12 +283,30 @@ async function renderTrashMain() {
       </div>`;
   main.innerHTML = `
     <div class="card">
-      <h2>Trash</h2>
+      <div class="card-header-row">
+        <h2>Trash</h2>
+        <button class="btn btn-danger" onclick="emptyTrash()">Empty Trash</button>
+      </div>
       <h3 class="team-section-header">Trashed Threads</h3>
       ${threadsHtml}
       <h3 class="team-section-header">Trashed Messages</h3>
       ${msgsHtml}
     </div>`;
+}
+
+async function emptyTrash() {
+  if (!await showConfirm('Empty Trash', 'Permanently delete ALL items in trash? This cannot be undone.', 'Empty Trash')) return;
+  try {
+    // Purge all trashed threads
+    for (const t of threadsData) {
+      await api(`/admin/threads/${encodeURIComponent(t.thread_id)}/purge`, { method: 'POST' });
+    }
+    // Purge all trashed messages
+    for (const tm of trashedMessagesData) {
+      await api(`/admin/messages/${encodeURIComponent(tm.message_id)}/purge`, { method: 'POST' });
+    }
+    await showTrash();
+  } catch (e) { alert(e.message); }
 }
 
 async function showTrashThread(threadId) {
@@ -240,7 +315,7 @@ async function showTrashThread(threadId) {
   main.innerHTML = '<div class="card"><p>Loading...</p></div>';
   try {
     const msgs = await fetchThread(threadId);
-    main.innerHTML = _renderThreadDetail(msgs, threadId, 'showTrash()');
+    main.innerHTML = _renderThreadDetail(msgs, threadId, 'showTrash()', 'trash');
     hydrateMarkdownBodies(main);
   } catch (e) {
     main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showTrash()">&larr; Back</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
@@ -258,7 +333,7 @@ async function showArchiveThread(threadId) {
   main.innerHTML = '<div class="card"><p>Loading...</p></div>';
   try {
     const msgs = await fetchThread(threadId);
-    main.innerHTML = _renderThreadDetail(msgs, threadId, 'showArchive()');
+    main.innerHTML = _renderThreadDetail(msgs, threadId, 'showArchive()', 'archive');
     hydrateMarkdownBodies(main);
   } catch (e) {
     main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showArchive()">&larr; Back</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
