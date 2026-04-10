@@ -706,10 +706,12 @@ async def admin_search(
     db = request.app.state.db
     is_pg = _get_database_url() is not None
     like_op = "ILIKE" if is_pg else "LIKE"
-    pattern = f"%{q}%"
+    q_escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    pattern = f"%{q_escaped}%"
+    escape_clause = " ESCAPE '\\\\'" if is_pg else " ESCAPE '\\'"
 
     where = f"""
-        (m.subject {like_op} ? OR m.body {like_op} ?)
+        (m.subject {like_op} ?{escape_clause} OR m.body {like_op} ?{escape_clause})
         AND EXISTS (SELECT 1 FROM agents a WHERE a.user_id = ? AND (a.address = m.from_agent OR a.address = m.to_agent))
     """
     params = (pattern, pattern, user["id"])
