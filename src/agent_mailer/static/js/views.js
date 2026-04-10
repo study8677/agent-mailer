@@ -113,10 +113,7 @@ async function renderTrashedMessageView() {
         <button type="button" class="back-btn" id="tmGoneBack">\u2190 Back to Trash</button>
       </div>`;
     document.getElementById('tmGoneBack').onclick = () => {
-      currentView = { type: 'trash' };
-      main.innerHTML =
-        '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
-      void refreshSidebar();
+      void showTrash();
     };
     return;
   }
@@ -142,18 +139,12 @@ async function renderTrashedMessageView() {
     </div>`;
   hydrateMarkdownBodies(main);
   document.getElementById('tmBackBtn').onclick = () => {
-    currentView = { type: 'trash' };
-    main.innerHTML =
-      '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
-    void refreshSidebar();
+    void showTrash();
   };
   document.getElementById('tmRestoreBtn').onclick = async () => {
     try {
       await api(`/admin/messages/${encodeURIComponent(mid)}/restore`, { method: 'POST' });
-      currentView = { type: 'trash' };
-      main.innerHTML =
-        '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
-      await refreshSidebar();
+      await showTrash();
     } catch (e) {
       alert(e.message);
     }
@@ -162,10 +153,7 @@ async function renderTrashedMessageView() {
     if (!await showConfirm('永久删除消息', '确定要永久删除这条消息吗？此操作不可撤销。', '删除')) return;
     try {
       await api(`/admin/messages/${encodeURIComponent(mid)}/purge`, { method: 'POST' });
-      currentView = { type: 'trash' };
-      main.innerHTML =
-        '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
-      await refreshSidebar();
+      await showTrash();
     } catch (e) {
       alert(e.message);
     }

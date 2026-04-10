@@ -30,13 +30,15 @@ function setSidebarSpecialMode(mode) {
 
 async function refreshSidebar() {
   const list = document.getElementById('agentList');
-  const inTrashContext =
+  const sel = document.getElementById('sidebarModeSelect');
+  const sidebarInSpecialMode = sel && sel.disabled;
+  const inTrashContext = sidebarInSpecialMode && (
     currentView?.type === 'trash' ||
     currentView?.type === 'trashedMessage' ||
-    (currentView?.type === 'thread' && currentView.fromTrash);
-  const inArchiveContext =
+    (currentView?.type === 'thread' && currentView.fromTrash));
+  const inArchiveContext = sidebarInSpecialMode && (
     currentView?.type === 'archive' ||
-    (currentView?.type === 'thread' && currentView.fromArchive);
+    (currentView?.type === 'thread' && currentView.fromArchive));
 
   if (inTrashContext) {
     await fetchThreadsSummary({ trashed: true });
