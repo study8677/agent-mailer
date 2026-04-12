@@ -259,3 +259,27 @@ class PaginatedInboxResponse(BaseModel):
 
 class TeamAddAgentRequest(BaseModel):
     agent_id: str
+
+
+# --- Memory models ---
+
+
+class MemoryCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=100)
+    content: str = Field(max_length=1500)
+
+
+class MemoryUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=100)
+    content: str | None = Field(default=None, max_length=1500)
+
+
+class MemoryResponse(BaseModel):
+    id: str
+    team_id: str
+    title: str
+    content: str
+    user_id: str
+    created_at: str
+    updated_at: str
+    updated_by: str

@@ -485,3 +485,21 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 .pagination-info { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
 .pagination-btn { font-size: 12px; padding: 6px 14px; }
 .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Team Memories */
+.memory-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; }
+.memory-item-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer; transition: background 0.1s; }
+.memory-item-header:hover { background: var(--sidebar-hover); }
+.memory-item-title { font-weight: 600; font-size: 13px; }
+.memory-item-meta { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.memory-edit-form { padding: 12px 14px; border-top: 1px solid var(--border); background: var(--bg); }
+.memory-edit-form label { font-size: 12px; color: var(--text-dim); display: block; margin-bottom: 4px; }
+.memory-edit-form input[type="text"] { width: 100%; margin-bottom: 8px; }
+.memory-edit-form textarea { width: 100%; min-height: 120px; margin-bottom: 8px; resize: vertical; }
+.memory-char-count { font-weight: normal; color: var(--muted); font-size: 11px; margin-left: 6px; }
+.memory-url-row { margin-bottom: 8px; }
+.memory-copy-btn { background: var(--sidebar-hover); border: 1px solid var(--border); border-radius: 4px; color: var(--text-dim); font-size: 11px; padding: 2px 8px; cursor: pointer; font-family: var(--mono); }
+.memory-copy-btn:hover { background: var(--primary-light); color: var(--accent-bright); }
+.compose-at-label { display: inline-block; font-size: 10px; padding: 1px 5px; border-radius: 3px; margin-right: 6px; font-weight: 600; }
+.compose-at-label-img { background: #2563eb22; color: #60a5fa; }
+.compose-at-label-mem { background: #7c3aed22; color: #a78bfa; }

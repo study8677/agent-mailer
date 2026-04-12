@@ -939,7 +939,7 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId, originalB
         </div>
         ${forwardScopeBlock}
         <div>
-          <label>Body <span style="font-weight:normal;color:var(--muted);font-size:11px">— type @ to insert image reference</span></label>
+          <label>Body <span style="font-weight:normal;color:var(--muted);font-size:11px">— type @ to insert image or memory reference</span></label>
           <textarea id="composeBody" placeholder="${esc(bodyPlaceholder)}"></textarea>
           <div class="compose-at-dropdown" id="composeAtDropdown"></div>
         </div>
@@ -1087,25 +1087,74 @@ function hydrateComposeAtReference() {
   const dropdown = document.getElementById('composeAtDropdown');
   if (!textarea || !dropdown) return;
   let atActive = false;
+  let atStartPos = -1;
+  let cachedMemories = null;
+
+  async function loadMemories() {
+    if (cachedMemories !== null) return cachedMemories;
+    try {
+      if (teamsData.length === 0) await fetchTeams();
+      const all = [];
+      for (const t of teamsData) {
+        const mems = await fetchTeamMemories(t.id);
+        for (const m of mems) all.push(m);
+      }
+      cachedMemories = all;
+    } catch (e) {
+      cachedMemories = [];
+    }
+    return cachedMemories;
+  }
+
+  async function showDropdown(filter) {
+    const memories = await loadMemories();
+    const q = (filter || '').toLowerCase();
+
+    const imgItems = composeUploadedFiles
+      .filter(f => !q || f.filename.toLowerCase().includes(q))
+      .map(f =>
+        `<div class="compose-at-item" data-type="image" data-url="${esc(f.url)}" data-name="${esc(f.filename)}">
+          <span class="compose-at-label compose-at-label-img">IMG</span>
+          <img src="${esc(f.url)}" class="compose-at-thumb">
+          <span>${esc(f.filename)}</span>
+        </div>`
+      );
+
+    const memItems = memories
+      .filter(m => !q || m.title.toLowerCase().includes(q))
+      .map(m =>
+        `<div class="compose-at-item" data-type="memory" data-url="${esc(location.origin + '/memories/' + m.id)}" data-name="${esc(m.title)}">
+          <span class="compose-at-label compose-at-label-mem">MEM</span>
+          <span>${esc(m.title)}</span>
+        </div>`
+      );
+
+    const allItems = imgItems.concat(memItems);
+    if (allItems.length === 0) {
+      dropdown.classList.remove('visible');
+      return;
+    }
+    dropdown.innerHTML = allItems.join('');
+    dropdown.classList.add('visible');
+  }
 
   textarea.addEventListener('input', () => {
     const val = textarea.value;
     const pos = textarea.selectionStart;
-    // Check if @ was just typed with no preceding word char
     if (pos > 0 && val[pos - 1] === '@' && (pos === 1 || /\s/.test(val[pos - 2]))) {
-      if (composeUploadedFiles.length > 0) {
-        atActive = true;
-        dropdown.innerHTML = composeUploadedFiles.map(f =>
-          `<div class="compose-at-item" data-url="${esc(f.url)}" data-name="${esc(f.filename)}">
-            <img src="${esc(f.url)}" class="compose-at-thumb">
-            <span>${esc(f.filename)}</span>
-          </div>`
-        ).join('');
-        dropdown.classList.add('visible');
+      atActive = true;
+      atStartPos = pos;
+      showDropdown('');
+    } else if (atActive) {
+      // Extract filter text after @
+      const filter = val.substring(atStartPos, pos);
+      if (/\s/.test(filter) || pos < atStartPos) {
+        dropdown.classList.remove('visible');
+        atActive = false;
+        atStartPos = -1;
+      } else {
+        showDropdown(filter);
       }
-    } else if (atActive && val[pos - 1] !== '@') {
-      dropdown.classList.remove('visible');
-      atActive = false;
     }
   });
 
@@ -1113,22 +1162,24 @@ function hydrateComposeAtReference() {
     e.preventDefault();
     const item = e.target.closest('.compose-at-item');
     if (!item) return;
+    const type = item.dataset.type;
     const url = item.dataset.url;
     const name = item.dataset.name;
     const pos = textarea.selectionStart;
-    // Replace the @ with markdown image
-    const before = textarea.value.substring(0, pos - 1);
+    // Replace from @ position to current cursor
+    const before = textarea.value.substring(0, atStartPos - 1);
     const after = textarea.value.substring(pos);
-    const insert = `![${name}](${url})`;
+    const insert = type === 'image' ? `![${name}](${url})` : `[@${name}](${url})`;
     textarea.value = before + insert + after;
     textarea.selectionStart = textarea.selectionEnd = before.length + insert.length;
     dropdown.classList.remove('visible');
     atActive = false;
+    atStartPos = -1;
     textarea.focus();
   });
 
   textarea.addEventListener('blur', () => {
-    setTimeout(() => { dropdown.classList.remove('visible'); atActive = false; }, 150);
+    setTimeout(() => { dropdown.classList.remove('visible'); atActive = false; atStartPos = -1; }, 150);
   });
 }
 

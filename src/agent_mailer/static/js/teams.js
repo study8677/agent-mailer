@@ -178,6 +178,69 @@ async function renderTeamDetail(teamId) {
       </div>`;
   }
 
+  // Fetch memories
+  let memories = [];
+  try {
+    memories = await fetchTeamMemories(teamId);
+  } catch (e) { /* ignore */ }
+
+  const memoriesAtLimit = memories.length >= 5;
+  const memoriesListHtml = memories.length === 0
+    ? '<div class="empty" style="padding:12px 0">No shared memories yet.</div>'
+    : memories.map(m => `
+        <div class="memory-item" id="memory-${esc(m.id)}">
+          <div class="memory-item-header" onclick="toggleMemoryEdit('${esc(teamId)}', '${esc(m.id)}')">
+            <div class="memory-item-title">${esc(m.title)}</div>
+            <div class="memory-item-meta">
+              <span class="text-muted">${esc(fmtTime(m.updated_at))}</span>
+              <button class="memory-copy-btn" onclick="event.stopPropagation(); copyMemoryUrl('${esc(m.id)}')" title="Copy URL">Copy URL</button>
+              <button class="btn-danger-sm" onclick="event.stopPropagation(); doDeleteMemory('${esc(teamId)}', '${esc(m.id)}', '${esc(m.title)}')">Delete</button>
+            </div>
+          </div>
+          <div class="memory-edit-form" id="memoryEdit-${esc(m.id)}" style="display:none">
+            <div>
+              <label>Title</label>
+              <input type="text" id="memoryTitle-${esc(m.id)}" value="${esc(m.title)}" maxlength="100">
+            </div>
+            <div>
+              <label>Content <span class="memory-char-count" id="memoryCount-${esc(m.id)}">${(m.content || '').length}/1500</span></label>
+              <textarea id="memoryContent-${esc(m.id)}" maxlength="1500" oninput="updateMemoryCharCount('${esc(m.id)}')">${esc(m.content)}</textarea>
+            </div>
+            <div class="memory-url-row">
+              <span class="text-muted" style="font-size:11px">URL: ${location.origin}/memories/${esc(m.id)}</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary" onclick="doUpdateMemory('${esc(teamId)}', '${esc(m.id)}')">Save</button>
+              <button class="btn btn-secondary" onclick="toggleMemoryEdit('${esc(teamId)}', '${esc(m.id)}')">Cancel</button>
+            </div>
+            <div class="login-error" id="memoryEditError-${esc(m.id)}" style="display:none"></div>
+          </div>
+        </div>
+      `).join('');
+
+  const addMemoryBtnHtml = memoriesAtLimit
+    ? '<div class="text-muted" style="font-size:12px;padding:8px 0">Maximum of 5 memories reached.</div>'
+    : '<button class="btn btn-primary" onclick="toggleAddMemoryForm()" id="addMemoryBtn">+ Add Memory</button>';
+
+  const addMemoryFormHtml = `
+    <div id="addMemoryForm" style="display:none">
+      <div class="compose-form">
+        <div>
+          <label for="newMemoryTitle">Title</label>
+          <input type="text" id="newMemoryTitle" placeholder="Memory title..." maxlength="100">
+        </div>
+        <div>
+          <label for="newMemoryContent">Content <span class="memory-char-count" id="newMemoryCount">0/1500</span></label>
+          <textarea id="newMemoryContent" placeholder="Markdown content..." maxlength="1500" oninput="updateNewMemoryCharCount()"></textarea>
+        </div>
+        <div id="addMemoryError" class="login-error" style="display:none"></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="doCreateMemory('${esc(teamId)}')">Create</button>
+          <button class="btn btn-secondary" onclick="toggleAddMemoryForm()">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+
   main.innerHTML = `
     <div class="card">
       <button type="button" class="back-btn" onclick="showTeams()">&larr; Back to Teams</button>
@@ -195,6 +258,10 @@ async function renderTeamDetail(teamId) {
       ${membersHtml}
       <h3 class="team-section-header">添加成员</h3>
       ${addAgentHtml}
+      <h3 class="team-section-header">共享记忆 (${memories.length}/5)</h3>
+      ${memoriesListHtml}
+      ${addMemoryBtnHtml}
+      ${addMemoryFormHtml}
     </div>`;
 }
 
@@ -285,4 +352,92 @@ async function removeAgentFromTeam(teamId, agentId, agentName) {
   } catch (e) {
     alert(e.message);
   }
+}
+
+// --- Team Memories UI ---
+
+function toggleAddMemoryForm() {
+  const form = document.getElementById('addMemoryForm');
+  const btn = document.getElementById('addMemoryBtn');
+  if (form.style.display === 'none') {
+    form.style.display = 'block';
+    if (btn) btn.style.display = 'none';
+    document.getElementById('newMemoryTitle').focus();
+  } else {
+    form.style.display = 'none';
+    if (btn) btn.style.display = '';
+  }
+}
+
+function toggleMemoryEdit(teamId, memoryId) {
+  const form = document.getElementById('memoryEdit-' + memoryId);
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function updateMemoryCharCount(memoryId) {
+  const ta = document.getElementById('memoryContent-' + memoryId);
+  const counter = document.getElementById('memoryCount-' + memoryId);
+  if (ta && counter) counter.textContent = ta.value.length + '/1500';
+}
+
+function updateNewMemoryCharCount() {
+  const ta = document.getElementById('newMemoryContent');
+  const counter = document.getElementById('newMemoryCount');
+  if (ta && counter) counter.textContent = ta.value.length + '/1500';
+}
+
+async function doCreateMemory(teamId) {
+  const title = document.getElementById('newMemoryTitle').value.trim();
+  const content = document.getElementById('newMemoryContent').value;
+  const errEl = document.getElementById('addMemoryError');
+  if (!title) {
+    errEl.textContent = 'Title is required';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    await createTeamMemory(teamId, { title, content });
+    await renderTeamDetail(teamId);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function doUpdateMemory(teamId, memoryId) {
+  const title = document.getElementById('memoryTitle-' + memoryId).value.trim();
+  const content = document.getElementById('memoryContent-' + memoryId).value;
+  const errEl = document.getElementById('memoryEditError-' + memoryId);
+  if (!title) {
+    errEl.textContent = 'Title is required';
+    errEl.style.display = 'block';
+    return;
+  }
+  try {
+    await updateTeamMemory(teamId, memoryId, { title, content });
+    await renderTeamDetail(teamId);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+async function doDeleteMemory(teamId, memoryId, title) {
+  if (!await showConfirm('Delete Memory', `Delete "${title}"?`, 'Delete')) return;
+  try {
+    await deleteTeamMemory(teamId, memoryId);
+    await renderTeamDetail(teamId);
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+function copyMemoryUrl(memoryId) {
+  const url = location.origin + '/memories/' + memoryId;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
 }

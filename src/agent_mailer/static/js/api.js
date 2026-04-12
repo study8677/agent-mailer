@@ -48,3 +48,30 @@ async function fetchTrashedMessages() {
   trashedMessagesData = await api('/admin/trash/messages');
   return trashedMessagesData;
 }
+
+// --- Team Memories ---
+async function fetchTeamMemories(teamId) {
+  return api(`/admin/teams/${encodeURIComponent(teamId)}/memories`);
+}
+
+async function createTeamMemory(teamId, data) {
+  return api(`/admin/teams/${encodeURIComponent(teamId)}/memories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+async function updateTeamMemory(teamId, memoryId, data) {
+  return api(`/admin/teams/${encodeURIComponent(teamId)}/memories/${encodeURIComponent(memoryId)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+async function deleteTeamMemory(teamId, memoryId) {
+  return api(`/admin/teams/${encodeURIComponent(teamId)}/memories/${encodeURIComponent(memoryId)}`, {
+    method: 'DELETE',
+  });
+}

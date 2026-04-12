@@ -109,6 +109,19 @@ PG_SCHEMA = [
         UNIQUE(name, user_id)
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS team_memories (
+        id TEXT PRIMARY KEY,
+        team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        user_id TEXT NOT NULL REFERENCES users(id),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        updated_by TEXT NOT NULL DEFAULT '',
+        UNIQUE(team_id, title)
+    )
+    """,
 ]
 
 # SQLite-only legacy schema (for CREATE TABLE IF NOT EXISTS + additive migrations)
@@ -215,6 +228,20 @@ CREATE TABLE IF NOT EXISTS teams (
     user_id TEXT NOT NULL REFERENCES users(id),
     created_at TEXT NOT NULL,
     UNIQUE(name, user_id)
+);
+"""
+
+TEAM_MEMORIES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS team_memories (
+    id TEXT PRIMARY KEY,
+    team_id TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    user_id TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    updated_by TEXT NOT NULL DEFAULT '',
+    UNIQUE(team_id, title)
 );
 """
 
@@ -421,6 +448,7 @@ async def init_db(db):
         await db.executescript(API_KEYS_SCHEMA)
         await db.executescript(FILES_SCHEMA)
         await db.executescript(TEAMS_SCHEMA)
+        await db.executescript(TEAM_MEMORIES_SCHEMA)
         await _add_column_if_missing(db, "agents", "tags", "TEXT NOT NULL DEFAULT '[]'")
         await _add_column_if_missing(db, "agents", "user_id", "TEXT")
         await _add_column_if_missing(db, "agents", "last_seen", "TEXT")
