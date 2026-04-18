@@ -638,6 +638,7 @@ function renderMsgItem(m) {
           <span>
             <span class="msg-action-tag ${m.action}">${m.action}</span>
             <span class="msg-time">${fmtTime(m.created_at)}</span>
+            ${!isExpanded ? `<span class="thread-link msg-item-copy" title="以 Markdown 格式复制本条邮件" onclick="copyMessageAsMarkdown('${m.id}', event)">Copy as Markdown</span>` : ''}
           </span>
         </div>
         ${!isExpanded ? `
@@ -662,6 +663,7 @@ function renderMsgDetail(m) {
         <span class="thread-link" data-thread-id="${m.thread_id}" onclick="event.stopPropagation(); showThreadFromInboxLink(this.dataset.threadId)">View full thread</span>
         <span class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
         <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">Forward</span>
+        <span class="thread-link" title="以 Markdown 格式复制本条邮件" onclick="copyMessageAsMarkdown('${m.id}', event)">Copy as Markdown</span>
         ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">Mark as unread</span>` : ''}
         <button type="button" class="btn btn-secondary msg-trash-action" style="font-size:12px;padding:4px 10px"
           onclick="event.stopPropagation(); trashSingleMessage('${m.id}', { fromInbox: true })">Move message to trash</button>
@@ -784,6 +786,7 @@ async function renderThreadView() {
           ${!st.trashed ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
             <span class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
             <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">Forward</span>
+            <span class="thread-link" title="以 Markdown 格式复制本条邮件" onclick="copyMessageAsMarkdown('${m.id}', event)">Copy as Markdown</span>
             ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">Mark as unread</span>` : ''}
             <button type="button" class="btn btn-secondary" style="font-size:12px;padding:4px 10px" onclick="trashSingleMessage('${m.id}', { fromThread: true })">Move message to trash</button>
           </div>` : ''}
