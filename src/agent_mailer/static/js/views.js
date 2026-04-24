@@ -9,9 +9,9 @@ function _paginateList(items, page, pageSize) {
 function _paginationHtml(page, totalPages, total, onClickFn) {
   if (totalPages <= 1) return '';
   return `<div class="pagination">
-    <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="${onClickFn}(${page - 1})">&laquo; Prev</button>
-    <span class="pagination-info">Page ${page} / ${totalPages} (${total} total)</span>
-    <button class="btn btn-secondary pagination-btn" ${page >= totalPages ? 'disabled' : ''} onclick="${onClickFn}(${page + 1})">Next &raquo;</button>
+    <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="${onClickFn}(${page - 1})">${esc(t('common.prev'))}</button>
+    <span class="pagination-info">${esc(t('common.pageInfo', { page, total: totalPages, count: total }))}</span>
+    <button class="btn btn-secondary pagination-btn" ${page >= totalPages ? 'disabled' : ''} onclick="${onClickFn}(${page + 1})">${esc(t('common.next'))}</button>
   </div>`;
 }
 
@@ -34,14 +34,14 @@ function renderSearchPage() {
   const q = currentView.query || '';
   main.innerHTML = `
     <div class="card">
-      <h2>Search</h2>
+      <h2>${esc(t('search.title'))}</h2>
       <div class="compose-form">
         <div>
-          <label>Keyword</label>
-          <input type="text" id="searchInput" placeholder="Search messages by subject or body..." value="${esc(q)}">
+          <label>${esc(t('search.keyword'))}</label>
+          <input type="text" id="searchInput" placeholder="${esc(t('search.placeholder'))}" value="${esc(q)}">
         </div>
         <div>
-          <button class="btn btn-primary" onclick="doSearch()">Search</button>
+          <button class="btn btn-primary" onclick="doSearch()">${esc(t('search.button'))}</button>
         </div>
       </div>
       <div id="searchResults"></div>
@@ -60,11 +60,11 @@ async function doSearch(page) {
   currentView.page = page;
   location.hash = `search?q=${encodeURIComponent(q)}`;
   const results = document.getElementById('searchResults');
-  results.innerHTML = '<p>Searching...</p>';
+  results.innerHTML = `<p>${esc(t('search.searching'))}</p>`;
   try {
     const data = await api(`/admin/search?q=${encodeURIComponent(q)}&page=${page}&page_size=20`);
     if (data.messages.length === 0) {
-      results.innerHTML = '<p class="empty" style="padding:16px 0">No results found.</p>';
+      results.innerHTML = `<p class="empty" style="padding:16px 0">${esc(t('search.noResults'))}</p>`;
       return;
     }
     const highlightSnippet = (text, query) => {
@@ -74,10 +74,10 @@ async function doSearch(page) {
     results.innerHTML = `
       <div class="stats-table-wrap" style="margin-top:16px">
       <table class="stats-table">
-        <thead><tr><th>Subject</th><th>Snippet</th><th>From</th><th>Date</th></tr></thead>
+        <thead><tr><th>${esc(t('search.colSubject'))}</th><th>${esc(t('search.colSnippet'))}</th><th>${esc(t('search.colFrom'))}</th><th>${esc(t('search.colDate'))}</th></tr></thead>
         <tbody>${data.messages.map(m => `
           <tr style="cursor:pointer" onclick="showThreadsThread('${esc(m.thread_id)}')">
-            <td><strong>${esc(m.subject) || '(no subject)'}</strong></td>
+            <td><strong>${esc(m.subject) || esc(t('common.noSubject'))}</strong></td>
             <td style="font-size:12px;max-width:300px;overflow:hidden;text-overflow:ellipsis">${highlightSnippet(m.body_snippet, q)}</td>
             <td style="color:var(--muted)">${esc(m.from_agent)}</td>
             <td style="color:var(--muted)">${esc(fmtTime(m.created_at))}</td>
@@ -86,12 +86,12 @@ async function doSearch(page) {
       </table>
       </div>
       ${data.total_pages > 1 ? `<div class="pagination">
-        <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="doSearch(${page - 1})">&laquo; Prev</button>
-        <span class="pagination-info">Page ${data.page} / ${data.total_pages} (${data.total} results)</span>
-        <button class="btn btn-secondary pagination-btn" ${page >= data.total_pages ? 'disabled' : ''} onclick="doSearch(${page + 1})">Next &raquo;</button>
+        <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="doSearch(${page - 1})">${esc(t('common.prev'))}</button>
+        <span class="pagination-info">${esc(t('common.pageInfoResults', { page: data.page, total: data.total_pages, count: data.total }))}</span>
+        <button class="btn btn-secondary pagination-btn" ${page >= data.total_pages ? 'disabled' : ''} onclick="doSearch(${page + 1})">${esc(t('common.next'))}</button>
       </div>` : ''}`;
   } catch (e) {
-    results.innerHTML = '<p class="empty">Error: ' + esc(e.message) + '</p>';
+    results.innerHTML = `<p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message)}</p>`;
   }
 }
 
@@ -130,11 +130,11 @@ async function showThreads(page) {
   document.getElementById('navThreads').classList.add('active');
   setSidebarSpecialMode('none');
   currentView = { type: 'threads', page: page || 1 };
-  document.getElementById('main').innerHTML = '<div class="card"><h2>Threads</h2><p>Loading...</p></div>';
+  document.getElementById('main').innerHTML = `<div class="card"><h2>${esc(t('threads.title'))}</h2><p>${esc(t('threads.loading'))}</p></div>`;
   try {
     await renderThreadsMain();
   } catch (e) {
-    document.getElementById('main').innerHTML = '<div class="card"><h2>Threads</h2><p class="empty">Error: ' + (e.message || e) + '</p></div>';
+    document.getElementById('main').innerHTML = `<div class="card"><h2>${esc(t('threads.title'))}</h2><p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message || e)}</p></div>`;
   }
 }
 
@@ -144,26 +144,26 @@ async function renderThreadsMain() {
   try {
     await fetchThreadsSummary({});
   } catch (e) {
-    main.innerHTML = '<div class="card"><h2>Threads</h2><p class="empty">Failed to load: ' + esc(e.message) + '</p></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('threads.title'))}</h2><p class="empty">${esc(t('threads.loadFailed', { msg: e.message }))}</p></div>`;
     return;
   }
   if (threadsData.length === 0) {
-    main.innerHTML = '<div class="card"><h2>Threads</h2><p class="empty" style="padding:24px 0;text-align:center">No threads yet.</p></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('threads.title'))}</h2><p class="empty" style="padding:24px 0;text-align:center">${esc(t('threads.empty'))}</p></div>`;
     return;
   }
   const pg = _paginateList(threadsData, currentView.page || 1);
   main.innerHTML = `
     <div class="card">
-      <h2>Threads</h2>
+      <h2>${esc(t('threads.title'))}</h2>
       <div class="stats-table-wrap">
       <table class="stats-table">
-        <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Last Activity</th></tr></thead>
-        <tbody>${pg.items.map(t => `
-          <tr style="cursor:pointer" onclick="showThreadsThread('${esc(t.thread_id)}')">
-            <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
-            <td class="stat-num">${t.message_count}</td>
-            <td class="stat-num" style="color:${t.unread_count > 0 ? 'var(--danger)' : 'inherit'};font-weight:${t.unread_count > 0 ? '600' : 'normal'}">${t.unread_count}</td>
-            <td style="color:var(--muted)">${esc(fmtTime(t.last_activity))}</td>
+        <thead><tr><th>${esc(t('threads.colSubject'))}</th><th>${esc(t('threads.colMessages'))}</th><th>${esc(t('threads.colUnread'))}</th><th>${esc(t('threads.colLastActivity'))}</th></tr></thead>
+        <tbody>${pg.items.map(th => `
+          <tr style="cursor:pointer" onclick="showThreadsThread('${esc(th.thread_id)}')">
+            <td><strong>${esc(th.preview_subject) || esc(t('common.noSubject'))}</strong></td>
+            <td class="stat-num">${th.message_count}</td>
+            <td class="stat-num" style="color:${th.unread_count > 0 ? 'var(--danger)' : 'inherit'};font-weight:${th.unread_count > 0 ? '600' : 'normal'}">${th.unread_count}</td>
+            <td style="color:var(--muted)">${esc(fmtTime(th.last_activity))}</td>
           </tr>
         `).join('')}</tbody>
       </table>
@@ -175,13 +175,13 @@ async function renderThreadsMain() {
 async function showThreadsThread(threadId) {
   currentView = { type: 'threadsThread', threadId };
   const main = document.getElementById('main');
-  main.innerHTML = '<div class="card"><p>Loading...</p></div>';
+  main.innerHTML = `<div class="card"><p>${esc(t('common.loading'))}</p></div>`;
   try {
     const msgs = await fetchThread(threadId);
     main.innerHTML = _renderThreadDetail(msgs, threadId, 'showThreads()', 'threads');
     hydrateMarkdownBodies(main);
   } catch (e) {
-    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showThreads()">&larr; Back</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
+    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showThreads()">${esc(t('common.back'))}</button><p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message)}</p></div>`;
   }
 }
 
@@ -206,26 +206,26 @@ function _renderThreadDetail(msgs, threadId, backFn, context) {
   let actionsHtml = '';
   if (context === 'threads') {
     actionsHtml = `
-      <button class="btn btn-secondary" onclick="_replyToThread()">Reply</button>
-      <button class="btn btn-secondary" onclick="_forwardFromThread()">Forward</button>
-      <button class="btn btn-secondary" onclick="archiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">Archive</button>
-      <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">Delete</button>`;
+      <button class="btn btn-secondary" onclick="_replyToThread()">${esc(t('thread.reply'))}</button>
+      <button class="btn btn-secondary" onclick="_forwardFromThread()">${esc(t('thread.forward'))}</button>
+      <button class="btn btn-secondary" onclick="archiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">${esc(t('thread.archive'))}</button>
+      <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">${esc(t('common.delete'))}</button>`;
   } else if (context === 'archive') {
     actionsHtml = `
-      <button class="btn btn-secondary" onclick="unarchiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">UnArchive</button>
-      <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">Delete</button>`;
+      <button class="btn btn-secondary" onclick="unarchiveThreadAction('${esc(threadId)}', '${esc(backFn)}')">${esc(t('thread.unarchive'))}</button>
+      <button class="btn btn-danger" onclick="trashThreadAction('${esc(threadId)}', '${esc(backFn)}')">${esc(t('common.delete'))}</button>`;
   } else if (context === 'trash') {
     actionsHtml = `
-      <button class="btn btn-secondary" onclick="restoreThreadAction('${esc(threadId)}', '${esc(backFn)}')">Restore</button>
-      <button class="btn btn-danger" onclick="purgeThreadAction('${esc(threadId)}', '${esc(backFn)}')">Permanent Delete</button>`;
+      <button class="btn btn-secondary" onclick="restoreThreadAction('${esc(threadId)}', '${esc(backFn)}')">${esc(t('thread.restore'))}</button>
+      <button class="btn btn-danger" onclick="purgeThreadAction('${esc(threadId)}', '${esc(backFn)}')">${esc(t('thread.permanentDelete'))}</button>`;
   }
   return `
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
-        <button type="button" class="back-btn" onclick="${backFn}">&larr; Back</button>
+        <button type="button" class="back-btn" onclick="${backFn}">${esc(t('common.back'))}</button>
         <div class="thread-actions" style="display:flex;gap:8px;flex-wrap:wrap">${actionsHtml}</div>
       </div>
-      <h2>Thread</h2>
+      <h2>${esc(t('thread.title'))}</h2>
       ${msgs.map(m => `
         <div class="thread-msg">
           <div class="thread-meta">
@@ -241,7 +241,7 @@ function _renderThreadDetail(msgs, threadId, backFn, context) {
 }
 
 async function archiveThreadAction(threadId, backFn) {
-  if (!await showConfirm('Archive Thread', 'Archive this thread?', 'Archive')) return;
+  if (!await showConfirm(t('thread.confirmArchiveTitle'), t('thread.confirmArchive'), t('thread.archive'))) return;
   try {
     await api(`/admin/threads/${encodeURIComponent(threadId)}/archive`, { method: 'POST' });
     eval(backFn);
@@ -249,7 +249,7 @@ async function archiveThreadAction(threadId, backFn) {
 }
 
 async function unarchiveThreadAction(threadId, backFn) {
-  if (!await showConfirm('UnArchive Thread', 'Restore this thread from archive?', 'UnArchive')) return;
+  if (!await showConfirm(t('thread.confirmUnarchiveTitle'), t('thread.confirmUnarchive'), t('thread.unarchive'))) return;
   try {
     await api(`/admin/threads/${encodeURIComponent(threadId)}/unarchive`, { method: 'POST' });
     eval(backFn);
@@ -257,7 +257,7 @@ async function unarchiveThreadAction(threadId, backFn) {
 }
 
 async function restoreThreadAction(threadId, backFn) {
-  if (!await showConfirm('Restore Thread', 'Restore this thread from trash?', 'Restore')) return;
+  if (!await showConfirm(t('thread.confirmRestoreTitle'), t('thread.confirmRestore'), t('thread.restore'))) return;
   try {
     await api(`/admin/threads/${encodeURIComponent(threadId)}/restore`, { method: 'POST' });
     eval(backFn);
@@ -265,7 +265,7 @@ async function restoreThreadAction(threadId, backFn) {
 }
 
 async function purgeThreadAction(threadId, backFn) {
-  if (!await showConfirm('Permanent Delete', 'Permanently delete this thread? This cannot be undone.', 'Delete Forever')) return;
+  if (!await showConfirm(t('thread.confirmPurgeTitle'), t('thread.confirmPurge'), t('thread.deleteForever'))) return;
   try {
     await api(`/admin/threads/${encodeURIComponent(threadId)}/purge`, { method: 'POST' });
     eval(backFn);
@@ -273,7 +273,7 @@ async function purgeThreadAction(threadId, backFn) {
 }
 
 async function trashThreadAction(threadId, backFn) {
-  if (!await showConfirm('Delete Thread', 'Move this thread to trash?', 'Delete')) return;
+  if (!await showConfirm(t('thread.confirmDeleteTitle'), t('thread.confirmTrash'), t('common.delete'))) return;
   try {
     await api(`/admin/threads/${encodeURIComponent(threadId)}/trash`, { method: 'POST' });
     eval(backFn);
@@ -287,11 +287,11 @@ async function showArchive(page) {
   document.getElementById('navArchive').classList.add('active');
   setSidebarSpecialMode('none');
   currentView = { type: 'archive', page: page || 1 };
-  document.getElementById('main').innerHTML = '<div class="card"><h2>Archive</h2><p>Loading...</p></div>';
+  document.getElementById('main').innerHTML = `<div class="card"><h2>${esc(t('archive.title'))}</h2><p>${esc(t('archive.loading'))}</p></div>`;
   try {
     await renderArchiveMain();
   } catch (e) {
-    document.getElementById('main').innerHTML = '<div class="card"><h2>Archive</h2><p class="empty">Error: ' + (e.message || e) + '</p></div>';
+    document.getElementById('main').innerHTML = `<div class="card"><h2>${esc(t('archive.title'))}</h2><p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message || e)}</p></div>`;
     console.error('showArchive error:', e);
   }
 }
@@ -302,26 +302,26 @@ async function renderArchiveMain() {
   try {
     await fetchThreadsSummary({ archived: true });
   } catch (e) {
-    main.innerHTML = '<div class="card"><h2>Archive</h2><p class="empty">Failed to load: ' + esc(e.message) + '</p></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('archive.title'))}</h2><p class="empty">${esc(t('archive.loadFailed', { msg: e.message }))}</p></div>`;
     return;
   }
   if (threadsData.length === 0) {
-    main.innerHTML = '<div class="card"><h2>Archive</h2><p class="empty" style="padding:24px 0;text-align:center">No archived threads. Archived threads will appear here.</p></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('archive.title'))}</h2><p class="empty" style="padding:24px 0;text-align:center">${esc(t('archive.empty'))}</p></div>`;
     return;
   }
   const pg = _paginateList(threadsData, currentView.page || 1);
   main.innerHTML = `
     <div class="card">
-      <h2>Archive</h2>
+      <h2>${esc(t('archive.title'))}</h2>
       <div class="stats-table-wrap">
       <table class="stats-table">
-        <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Last Activity</th></tr></thead>
-        <tbody>${pg.items.map(t => `
-          <tr style="cursor:pointer" onclick="showArchiveThread('${esc(t.thread_id)}')">
-            <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
-            <td class="stat-num">${t.message_count}</td>
-            <td class="stat-num">${t.unread_count}</td>
-            <td style="color:var(--muted)">${esc(fmtTime(t.last_activity))}</td>
+        <thead><tr><th>${esc(t('threads.colSubject'))}</th><th>${esc(t('threads.colMessages'))}</th><th>${esc(t('threads.colUnread'))}</th><th>${esc(t('threads.colLastActivity'))}</th></tr></thead>
+        <tbody>${pg.items.map(th => `
+          <tr style="cursor:pointer" onclick="showArchiveThread('${esc(th.thread_id)}')">
+            <td><strong>${esc(th.preview_subject) || esc(t('common.noSubject'))}</strong></td>
+            <td class="stat-num">${th.message_count}</td>
+            <td class="stat-num">${th.unread_count}</td>
+            <td style="color:var(--muted)">${esc(fmtTime(th.last_activity))}</td>
           </tr>
         `).join('')}</tbody>
       </table>
@@ -335,11 +335,11 @@ async function showTrash() {
   document.getElementById('navTrash').classList.add('active');
   setSidebarSpecialMode('none');
   currentView = { type: 'trash' };
-  document.getElementById('main').innerHTML = '<div class="card"><h2>Trash</h2><p>Loading...</p></div>';
+  document.getElementById('main').innerHTML = `<div class="card"><h2>${esc(t('trash.title'))}</h2><p>${esc(t('trash.loading'))}</p></div>`;
   try {
     await renderTrashMain();
   } catch (e) {
-    document.getElementById('main').innerHTML = '<div class="card"><h2>Trash</h2><p class="empty">Error: ' + (e.message || e) + '</p></div>';
+    document.getElementById('main').innerHTML = `<div class="card"><h2>${esc(t('trash.title'))}</h2><p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message || e)}</p></div>`;
     console.error('showTrash error:', e);
   }
 }
@@ -351,36 +351,36 @@ async function renderTrashMain() {
     await fetchThreadsSummary({ trashed: true });
     await fetchTrashedMessages();
   } catch (e) {
-    main.innerHTML = '<div class="card"><h2>Trash</h2><p class="empty">Failed to load trash data: ' + esc(e.message) + '</p></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('trash.title'))}</h2><p class="empty">${esc(t('trash.loadFailed', { msg: e.message }))}</p></div>`;
     return;
   }
   if (threadsData.length === 0 && trashedMessagesData.length === 0) {
-    main.innerHTML = '<div class="card"><h2>Trash</h2><p class="empty" style="padding:24px 0;text-align:center">Trash is empty. Deleted threads and messages will appear here.</p></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('trash.title'))}</h2><p class="empty" style="padding:24px 0;text-align:center">${esc(t('trash.empty'))}</p></div>`;
     return;
   }
   const threadsHtml = threadsData.length === 0
-    ? '<div class="empty" style="padding:12px 0">No threads in trash.</div>'
+    ? `<div class="empty" style="padding:12px 0">${esc(t('trash.noThreads'))}</div>`
     : `<div class="stats-table-wrap">
       <table class="stats-table">
-        <thead><tr><th>Subject</th><th>Messages</th><th>Unread</th><th>Trashed At</th></tr></thead>
-        <tbody>${threadsData.map(t => `
-          <tr style="cursor:pointer" onclick="showTrashThread('${esc(t.thread_id)}')">
-            <td><strong>${esc(t.preview_subject) || '(no subject)'}</strong></td>
-            <td class="stat-num">${t.message_count}</td>
-            <td class="stat-num">${t.unread_count}</td>
-            <td style="color:var(--muted)">${esc(fmtTime(t.trashed_at || t.last_activity))}</td>
+        <thead><tr><th>${esc(t('threads.colSubject'))}</th><th>${esc(t('threads.colMessages'))}</th><th>${esc(t('threads.colUnread'))}</th><th>${esc(t('threads.colTrashedAt'))}</th></tr></thead>
+        <tbody>${threadsData.map(th => `
+          <tr style="cursor:pointer" onclick="showTrashThread('${esc(th.thread_id)}')">
+            <td><strong>${esc(th.preview_subject) || esc(t('common.noSubject'))}</strong></td>
+            <td class="stat-num">${th.message_count}</td>
+            <td class="stat-num">${th.unread_count}</td>
+            <td style="color:var(--muted)">${esc(fmtTime(th.trashed_at || th.last_activity))}</td>
           </tr>
         `).join('')}</tbody>
       </table>
       </div>`;
   const msgsHtml = trashedMessagesData.length === 0
-    ? '<div class="empty" style="padding:12px 0">No individual messages in trash.</div>'
+    ? `<div class="empty" style="padding:12px 0">${esc(t('trash.noMessages'))}</div>`
     : `<div class="stats-table-wrap">
       <table class="stats-table">
-        <thead><tr><th>Subject</th><th>From</th><th>Trashed At</th></tr></thead>
+        <thead><tr><th>${esc(t('threads.colSubject'))}</th><th>${esc(t('threads.colFrom'))}</th><th>${esc(t('threads.colTrashedAt'))}</th></tr></thead>
         <tbody>${trashedMessagesData.map(tm => `
           <tr style="cursor:pointer" onclick="showTrashMessage('${esc(tm.message_id)}')">
-            <td><strong>${esc(tm.subject) || '(no subject)'}</strong></td>
+            <td><strong>${esc(tm.subject) || esc(t('common.noSubject'))}</strong></td>
             <td style="color:var(--muted)">${esc(tm.from_agent)}</td>
             <td style="color:var(--muted)">${esc(fmtTime(tm.trashed_at))}</td>
           </tr>
@@ -390,18 +390,18 @@ async function renderTrashMain() {
   main.innerHTML = `
     <div class="card">
       <div class="card-header-row">
-        <h2>Trash</h2>
-        <button class="btn btn-danger" onclick="emptyTrash()">Empty Trash</button>
+        <h2>${esc(t('trash.title'))}</h2>
+        <button class="btn btn-danger" onclick="emptyTrash()">${esc(t('trash.emptyBtn'))}</button>
       </div>
-      <h3 class="team-section-header">Trashed Threads</h3>
+      <h3 class="team-section-header">${esc(t('trash.trashedThreads'))}</h3>
       ${threadsHtml}
-      <h3 class="team-section-header">Trashed Messages</h3>
+      <h3 class="team-section-header">${esc(t('trash.trashedMessages'))}</h3>
       ${msgsHtml}
     </div>`;
 }
 
 async function emptyTrash() {
-  if (!await showConfirm('Empty Trash', 'Permanently delete ALL items in trash? This cannot be undone.', 'Empty Trash')) return;
+  if (!await showConfirm(t('trash.confirmEmptyTitle'), t('trash.confirmEmpty'), t('trash.emptyBtn'))) return;
   try {
     // Purge all trashed threads
     for (const t of threadsData) {
@@ -418,13 +418,13 @@ async function emptyTrash() {
 async function showTrashThread(threadId) {
   currentView = { type: 'trashThread', threadId };
   const main = document.getElementById('main');
-  main.innerHTML = '<div class="card"><p>Loading...</p></div>';
+  main.innerHTML = `<div class="card"><p>${esc(t('common.loading'))}</p></div>`;
   try {
     const msgs = await fetchThread(threadId);
     main.innerHTML = _renderThreadDetail(msgs, threadId, 'showTrash()', 'trash');
     hydrateMarkdownBodies(main);
   } catch (e) {
-    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showTrash()">&larr; Back</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
+    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showTrash()">${esc(t('common.back'))}</button><p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message)}</p></div>`;
   }
 }
 
@@ -436,13 +436,13 @@ async function showTrashMessage(messageId) {
 async function showArchiveThread(threadId) {
   currentView = { type: 'archiveThread', threadId };
   const main = document.getElementById('main');
-  main.innerHTML = '<div class="card"><p>Loading...</p></div>';
+  main.innerHTML = `<div class="card"><p>${esc(t('common.loading'))}</p></div>`;
   try {
     const msgs = await fetchThread(threadId);
     main.innerHTML = _renderThreadDetail(msgs, threadId, 'showArchive()', 'archive');
     hydrateMarkdownBodies(main);
   } catch (e) {
-    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showArchive()">&larr; Back</button><p class="empty">Error: ${esc(e.message)}</p></div>`;
+    main.innerHTML = `<div class="card"><button type="button" class="back-btn" onclick="showArchive()">${esc(t('common.back'))}</button><p class="empty">${esc(t('common.errorPrefix'))}${esc(e.message)}</p></div>`;
   }
 }
 
@@ -461,8 +461,8 @@ async function renderTrashedMessageView() {
   } catch (e) {
     main.innerHTML = `
       <div class="card">
-        <p class="empty">This message is no longer in trash.</p>
-        <button type="button" class="back-btn" id="tmGoneBack">\u2190 Back to Trash</button>
+        <p class="empty">${esc(t('trash.gone'))}</p>
+        <button type="button" class="back-btn" id="tmGoneBack">${esc(t('thread.backTrash'))}</button>
       </div>`;
     document.getElementById('tmGoneBack').onclick = () => {
       void showTrash();
@@ -471,10 +471,10 @@ async function renderTrashedMessageView() {
   }
   const m = data.message;
   main.innerHTML = `
-    <button type="button" class="back-btn" id="tmBackBtn">\u2190 Back to Trash</button>
+    <button type="button" class="back-btn" id="tmBackBtn">${esc(t('thread.backTrash'))}</button>
     <div class="card">
-      <h2>Message in trash</h2>
-      <p class="meta">Trashed at: ${esc(fmtTime(data.trashed_at))}</p>
+      <h2>${esc(t('trash.messageInTrash'))}</h2>
+      <p class="meta">${esc(t('trash.trashedAt', { time: fmtTime(data.trashed_at) }))}</p>
       <div class="thread-msg">
         <div class="thread-meta">
           <strong>${esc(m.from_agent)}</strong> &rarr; ${esc(m.to_agent)}
@@ -485,8 +485,8 @@ async function renderTrashedMessageView() {
         <div class="thread-body markdown-body" data-md-html="${mdDataAttr(m.body_html)}"></div>
       </div>
       <div class="thread-actions" style="margin-top:12px">
-        <button type="button" class="btn btn-secondary" id="tmRestoreBtn">Restore</button>
-        <button type="button" class="btn btn-secondary" id="tmPurgeBtn" style="background:var(--danger)">Delete permanently</button>
+        <button type="button" class="btn btn-secondary" id="tmRestoreBtn">${esc(t('trash.restoreBtn'))}</button>
+        <button type="button" class="btn btn-secondary" id="tmPurgeBtn" style="background:var(--danger)">${esc(t('trash.purgeBtn'))}</button>
       </div>
     </div>`;
   hydrateMarkdownBodies(main);
@@ -502,7 +502,7 @@ async function renderTrashedMessageView() {
     }
   };
   document.getElementById('tmPurgeBtn').onclick = async () => {
-    if (!await showConfirm('永久删除消息', '确定要永久删除这条消息吗？此操作不可撤销。', '删除')) return;
+    if (!await showConfirm(t('trash.confirmPurgeMsgTitle'), t('trash.confirmPurgeMsgBody'), t('common.delete'))) return;
     try {
       await api(`/admin/messages/${encodeURIComponent(mid)}/purge`, { method: 'POST' });
       await showTrash();
@@ -513,14 +513,14 @@ async function renderTrashedMessageView() {
 }
 
 async function trashSingleMessage(messageId, opts = {}) {
-  if (!await showConfirm('Move to Trash', 'Move this message to trash?', 'Move to Trash')) return;
+  if (!await showConfirm(t('inbox.confirmTrashMsgTitle'), t('inbox.confirmTrashMsgBody'), t('inbox.confirmTrashMsgBtn'))) return;
   try {
     await api(`/admin/messages/${encodeURIComponent(messageId)}/trash`, { method: 'POST' });
     if (opts.fromInbox && expandedMsg === messageId) expandedMsg = null;
     if (currentView?.type === 'trashedMessage') {
       currentView = { type: 'trash' };
       document.getElementById('main').innerHTML =
-        '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
+        `<div class="empty">${esc(t('empty.selectTrashItem'))}</div>`;
     }
     await refreshSidebar();
     if (opts.fromThread) await renderThreadView();
@@ -549,7 +549,7 @@ async function showHumanInbox() {
   } else {
     currentView = null;
     document.getElementById('main').innerHTML =
-      '<div class="empty">Select an agent to view inbox, or click Compose.</div>';
+      `<div class="empty">${esc(t('empty.selectAgent'))}</div>`;
     await refreshSidebar();
   }
 }
@@ -565,10 +565,10 @@ async function showInbox(address, agentId, page) {
 
 function renderTagEditor(agentId, tags) {
   if (!agentId) return '';
-  const pills = tags.map((t, i) =>
-    `<span class="tag-pill">${esc(t)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
+  const pills = tags.map((tag, i) =>
+    `<span class="tag-pill">${esc(tag)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
   ).join('');
-  return `<div class="tag-editor" id="tagEditor">${pills}<div class="tag-input-wrap"><input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}" autocomplete="off"><div class="tag-autocomplete" id="tagAutocomplete"></div></div></div>`;
+  return `<div class="tag-editor" id="tagEditor">${pills}<div class="tag-input-wrap"><input class="tag-input" id="tagInput" type="text" placeholder="${esc(t('tags.addPlaceholder'))}" data-agent-id="${esc(agentId)}" autocomplete="off"><div class="tag-autocomplete" id="tagAutocomplete"></div></div></div>`;
 }
 
 async function renderInbox() {
@@ -586,9 +586,9 @@ async function renderInbox() {
 
   const paginationHtml = total_pages > 1 ? `
     <div class="pagination">
-      <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="showInbox('${esc(address)}', '${esc(agentId || '')}', ${page - 1})">&laquo; Prev</button>
-      <span class="pagination-info">Page ${page} / ${total_pages} (${total} messages)</span>
-      <button class="btn btn-secondary pagination-btn" ${page >= total_pages ? 'disabled' : ''} onclick="showInbox('${esc(address)}', '${esc(agentId || '')}', ${page + 1})">Next &raquo;</button>
+      <button class="btn btn-secondary pagination-btn" ${page <= 1 ? 'disabled' : ''} onclick="showInbox('${esc(address)}', '${esc(agentId || '')}', ${page - 1})">${esc(t('common.prev'))}</button>
+      <span class="pagination-info">${esc(t('common.pageInfoMessages', { page, total: total_pages, count: total }))}</span>
+      <button class="btn btn-secondary pagination-btn" ${page >= total_pages ? 'disabled' : ''} onclick="showInbox('${esc(address)}', '${esc(agentId || '')}', ${page + 1})">${esc(t('common.next'))}</button>
     </div>` : '';
 
   const existingList = main.querySelector('.msg-list');
@@ -598,7 +598,7 @@ async function renderInbox() {
       : msgs.map(m => renderMsgItem(m)).join('');
     const emptyEl = main.querySelector('.inbox-empty');
     if (msgs.length === 0 && !emptyEl) {
-      existingList.insertAdjacentHTML('afterend', '<div class="empty inbox-empty">No messages.</div>');
+      existingList.insertAdjacentHTML('afterend', `<div class="empty inbox-empty">${esc(t('inbox.empty'))}</div>`);
     } else if (msgs.length > 0 && emptyEl) {
       emptyEl.remove();
     }
@@ -614,12 +614,12 @@ async function renderInbox() {
 
   main.innerHTML = `
     <div class="card">
-      <h2>Inbox: ${esc(address)}</h2>
+      <h2>${esc(t('inbox.title', { address }))}</h2>
       ${tagEditorHtml}
       <ul class="msg-list">
         ${msgs.map(m => renderMsgItem(m)).join('')}
       </ul>
-      ${msgs.length === 0 ? '<div class="empty inbox-empty">No messages.</div>' : ''}
+      ${msgs.length === 0 ? `<div class="empty inbox-empty">${esc(t('inbox.empty'))}</div>` : ''}
       ${paginationHtml}
     </div>`;
   hydrateMarkdownBodies(main);
@@ -629,7 +629,7 @@ async function renderInbox() {
 function renderMsgItem(m) {
   const isExpanded = expandedMsg === m.id;
   const readClass = m.is_read ? 'read' : 'unread';
-  const subjText = esc(m.subject) || '(no subject)';
+  const subjText = esc(m.subject) || esc(t('common.noSubject'));
   return `
     <li class="msg-item ${readClass}">
       <div class="msg-item-head" onclick="toggleMsg('${m.id}', event)">
@@ -638,8 +638,8 @@ function renderMsgItem(m) {
           <span>
             <span class="msg-action-tag ${m.action}">${m.action}</span>
             <span class="msg-time">${fmtTime(m.created_at)}</span>
-            ${!isExpanded ? `<span class="thread-link msg-item-copy" title="以 Markdown 格式复制本条邮件" onclick="copyMessageAsMarkdown('${m.id}', event)">Copy as Markdown</span>
-            <span class="thread-link msg-item-copy" title="保存邮件到所属 Team 的共享知识库" onclick="saveMessageToTeam('${m.id}', event)">Save to Team</span>` : ''}
+            ${!isExpanded ? `<span class="thread-link msg-item-copy" title="${esc(t('inbox.copyMdTitle'))}" onclick="copyMessageAsMarkdown('${m.id}', event)">${esc(t('inbox.copyMd'))}</span>
+            <span class="thread-link msg-item-copy" title="${esc(t('inbox.saveToTeamTitle'))}" onclick="saveMessageToTeam('${m.id}', event)">${esc(t('inbox.saveToTeam'))}</span>` : ''}
           </span>
         </div>
         ${!isExpanded ? `
@@ -656,19 +656,19 @@ function renderMsgItem(m) {
 function renderMsgDetail(m) {
   return `
     <div class="msg-detail">
-      <div class="meta">From: ${esc(m.from_agent)} &rarr; To: ${esc(m.to_agent)}</div>
-      <div class="meta">Action: ${m.action} | Thread: ${m.thread_id.substring(0, 8)}...</div>
-      ${m.parent_id ? `<div class="meta">Reply to: ${m.parent_id.substring(0, 8)}...</div>` : ''}
+      <div class="meta">${esc(t('msg.fromTo', { from: m.from_agent, to: m.to_agent }))}</div>
+      <div class="meta">${esc(t('msg.actionThread', { action: m.action, thread: m.thread_id.substring(0, 8) }))}</div>
+      ${m.parent_id ? `<div class="meta">${esc(t('msg.replyTo', { parent: m.parent_id.substring(0, 8) }))}</div>` : ''}
       <div class="msg-body markdown-body" data-md-html="${mdDataAttr(m.body_html)}"></div>
       <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-        <span class="thread-link" data-thread-id="${m.thread_id}" onclick="event.stopPropagation(); showThreadFromInboxLink(this.dataset.threadId)">View full thread</span>
-        <span class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
-        <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">Forward</span>
-        <span class="thread-link" title="以 Markdown 格式复制本条邮件" onclick="copyMessageAsMarkdown('${m.id}', event)">Copy as Markdown</span>
-        <span class="thread-link" title="保存邮件到所属 Team 的共享知识库" onclick="saveMessageToTeam('${m.id}', event)">Save to Team</span>
-        ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">Mark as unread</span>` : ''}
+        <span class="thread-link" data-thread-id="${m.thread_id}" onclick="event.stopPropagation(); showThreadFromInboxLink(this.dataset.threadId)">${esc(t('inbox.viewFullThread'))}</span>
+        <span class="thread-link" onclick="replyToMsg('${m.id}', event)">${esc(t('inbox.replyLink'))}</span>
+        <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">${esc(t('inbox.forwardLink'))}</span>
+        <span class="thread-link" title="${esc(t('inbox.copyMdTitle'))}" onclick="copyMessageAsMarkdown('${m.id}', event)">${esc(t('inbox.copyMd'))}</span>
+        <span class="thread-link" title="${esc(t('inbox.saveToTeamTitle'))}" onclick="saveMessageToTeam('${m.id}', event)">${esc(t('inbox.saveToTeam'))}</span>
+        ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">${esc(t('inbox.markUnread'))}</span>` : ''}
         <button type="button" class="btn btn-secondary msg-trash-action" style="font-size:12px;padding:4px 10px"
-          onclick="event.stopPropagation(); trashSingleMessage('${m.id}', { fromInbox: true })">Move message to trash</button>
+          onclick="event.stopPropagation(); trashSingleMessage('${m.id}', { fromInbox: true })">${esc(t('inbox.moveMsgToTrash'))}</button>
       </div>
     </div>`;
 }
@@ -733,19 +733,19 @@ async function showThread(threadId, fromAddress, ev, fromThreadSidebar = false) 
 function buildThreadActionButtons(st) {
   const parts = [];
   if (st.trashed) {
-    parts.push('<button type="button" class="btn btn-secondary" id="restoreThreadBtn">Restore</button>');
+    parts.push(`<button type="button" class="btn btn-secondary" id="restoreThreadBtn">${esc(t('thread.restore'))}</button>`);
     parts.push(
-      '<button type="button" class="btn btn-secondary" id="purgeThreadBtn" style="background:var(--danger)">Delete permanently</button>',
+      `<button type="button" class="btn btn-secondary" id="purgeThreadBtn" style="background:var(--danger)">${esc(t('thread.permanentDelete'))}</button>`,
     );
     return parts.join('');
   }
   if (st.archived) {
-    parts.push('<button type="button" class="btn btn-secondary" id="unarchiveThreadBtn">Unarchive</button>');
+    parts.push(`<button type="button" class="btn btn-secondary" id="unarchiveThreadBtn">${esc(t('thread.unarchiveBtn'))}</button>`);
   } else {
-    parts.push('<button type="button" class="btn btn-secondary" id="archiveThreadBtn">Archive thread</button>');
+    parts.push(`<button type="button" class="btn btn-secondary" id="archiveThreadBtn">${esc(t('thread.archiveBtn'))}</button>`);
   }
   parts.push(
-    '<button type="button" class="btn btn-secondary" id="trashThreadBtn" style="background:#64748b">Move to trash</button>',
+    `<button type="button" class="btn btn-secondary" id="trashThreadBtn" style="background:#64748b">${esc(t('thread.moveToTrash'))}</button>`,
   );
   return parts.join('');
 }
@@ -760,19 +760,19 @@ async function renderThreadView() {
     st = await api(`/admin/threads/${encodeURIComponent(threadId)}/status`);
   } catch (e) { /* ignore */ }
   const main = document.getElementById('main');
-  let backLabel = '\u2190 Back to inbox';
+  let backLabel = t('thread.backInbox');
   if (fromThreadSidebar) {
-    if (fromTrash) backLabel = '\u2190 Back to Trash';
-    else if (fromArchive) backLabel = '\u2190 Back to Archive';
-    else backLabel = '\u2190 Back to thread list';
+    if (fromTrash) backLabel = t('thread.backTrash');
+    else if (fromArchive) backLabel = t('thread.backArchive');
+    else backLabel = t('thread.backThreads');
   }
   const firstSubject = msgs.length > 0 && String(msgs[0].subject || '').trim()
     ? String(msgs[0].subject).trim()
     : '';
-  const threadTitle = firstSubject || '(no subject)';
+  const threadTitle = firstSubject || t('common.noSubject');
   const actionHtml = buildThreadActionButtons(st);
   main.innerHTML = `
-    <button type="button" class="back-btn" id="threadBackBtn">${backLabel}</button>
+    <button type="button" class="back-btn" id="threadBackBtn">${esc(backLabel)}</button>
     <div class="card">
       <h2>${esc(threadTitle)}</h2>
       <div class="thread-actions">${actionHtml}</div>
@@ -786,12 +786,12 @@ async function renderThreadView() {
           ${m.subject ? `<div class="thread-subject-line${humanSubjectClass(m.from_agent)}">${esc(m.subject)}</div>` : ''}
           <div class="thread-body markdown-body" data-md-html="${mdDataAttr(m.body_html)}"></div>
           ${!st.trashed ? `<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-            <span class="thread-link" onclick="replyToMsg('${m.id}', event)">Reply</span>
-            <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">Forward</span>
-            <span class="thread-link" title="以 Markdown 格式复制本条邮件" onclick="copyMessageAsMarkdown('${m.id}', event)">Copy as Markdown</span>
-            <span class="thread-link" title="保存邮件到所属 Team 的共享知识库" onclick="saveMessageToTeam('${m.id}', event)">Save to Team</span>
-            ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">Mark as unread</span>` : ''}
-            <button type="button" class="btn btn-secondary" style="font-size:12px;padding:4px 10px" onclick="trashSingleMessage('${m.id}', { fromThread: true })">Move message to trash</button>
+            <span class="thread-link" onclick="replyToMsg('${m.id}', event)">${esc(t('inbox.replyLink'))}</span>
+            <span class="thread-link" onclick="forwardToMsg('${m.id}', event)">${esc(t('inbox.forwardLink'))}</span>
+            <span class="thread-link" title="${esc(t('inbox.copyMdTitle'))}" onclick="copyMessageAsMarkdown('${m.id}', event)">${esc(t('inbox.copyMd'))}</span>
+            <span class="thread-link" title="${esc(t('inbox.saveToTeamTitle'))}" onclick="saveMessageToTeam('${m.id}', event)">${esc(t('inbox.saveToTeam'))}</span>
+            ${m.is_read ? `<span class="thread-link" onclick="markMsgUnread('${m.id}', event)">${esc(t('inbox.markUnread'))}</span>` : ''}
+            <button type="button" class="btn btn-secondary" style="font-size:12px;padding:4px 10px" onclick="trashSingleMessage('${m.id}', { fromThread: true })">${esc(t('inbox.moveMsgToTrash'))}</button>
           </div>` : ''}
         </div>
       `).join('')}
@@ -824,7 +824,7 @@ async function renderThreadView() {
         if (currentView.fromArchive) {
           currentView = { type: 'archive' };
           document.getElementById('main').innerHTML =
-            '<div class="empty">Select an archived thread from the sidebar.</div>';
+            `<div class="empty">${esc(t('empty.selectArchiveThread'))}</div>`;
         }
         await refreshSidebar();
         if (!currentView.fromArchive && currentView.type === 'thread') await renderThreadView();
@@ -853,7 +853,7 @@ async function renderThreadView() {
         await api(`/admin/threads/${encodeURIComponent(threadId)}/restore`, { method: 'POST' });
         currentView = { type: 'trash' };
         document.getElementById('main').innerHTML =
-          '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
+          `<div class="empty">${esc(t('empty.selectTrashItem'))}</div>`;
         await refreshSidebar();
       } catch (e) {
         restoreBtn.insertAdjacentText('afterend', ' ' + e.message);
@@ -863,12 +863,12 @@ async function renderThreadView() {
   const purgeBtn = document.getElementById('purgeThreadBtn');
   if (purgeBtn) {
     purgeBtn.onclick = async () => {
-      if (!await showConfirm('永久删除线程', '确定要永久删除这个线程及其所有消息吗？此操作不可撤销。', '删除')) return;
+      if (!await showConfirm(t('thread.confirmPurgeThreadTitle'), t('thread.confirmPurgeThreadBody'), t('common.delete'))) return;
       try {
         await api(`/admin/threads/${encodeURIComponent(threadId)}/purge`, { method: 'POST' });
         currentView = { type: 'trash' };
         document.getElementById('main').innerHTML =
-          '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
+          `<div class="empty">${esc(t('empty.selectTrashItem'))}</div>`;
         await refreshSidebar();
       } catch (e) {
         purgeBtn.insertAdjacentText('afterend', ' ' + e.message);
@@ -881,20 +881,20 @@ function threadBackToSidebarList() {
   if (currentView?.fromTrash) {
     currentView = { type: 'trash' };
     document.getElementById('main').innerHTML =
-      '<div class="empty">Select a deleted thread or message from the sidebar.</div>';
+      `<div class="empty">${esc(t('empty.selectTrashItem'))}</div>`;
     void refreshSidebar();
     return;
   }
   if (currentView?.fromArchive) {
     currentView = { type: 'archive' };
     document.getElementById('main').innerHTML =
-      '<div class="empty">Select an archived thread from the sidebar.</div>';
+      `<div class="empty">${esc(t('empty.selectArchiveThread'))}</div>`;
     void refreshSidebar();
     return;
   }
   currentView = { type: 'threadList' };
   document.getElementById('main').innerHTML =
-    '<div class="empty">Select a thread from the sidebar, or switch to By Agents.</div>';
+    `<div class="empty">${esc(t('empty.selectThread'))}</div>`;
   void refreshSidebar();
 }
 
@@ -906,70 +906,70 @@ async function showCompose(prefillTo, prefillSubject, prefillParentId, originalB
 
   if (agents.length === 0) await fetchAgents();
 
-  let title = 'Compose Message';
-  if (mode === 'reply') title = 'Reply';
-  else if (mode === 'forward') title = 'Forward';
+  let title = t('compose.titleCompose');
+  if (mode === 'reply') title = t('compose.titleReply');
+  else if (mode === 'forward') title = t('compose.titleForward');
 
   const forwardScopeBlock = mode === 'forward' ? `
         <div class="compose-forward-scope">
-          <label>Forwarded content</label>
-          <p class="compose-forward-hint">Shown after your note. Pick scope for the new recipient.</p>
+          <label>${esc(t('compose.forwardContent'))}</label>
+          <p class="compose-forward-hint">${esc(t('compose.forwardHint'))}</p>
           <label class="compose-radio-row">
             <input type="radio" name="forwardScope" value="message" checked>
-            <span>This message only</span>
+            <span>${esc(t('compose.forwardMessageOnly'))}</span>
           </label>
           <label class="compose-radio-row">
             <input type="radio" name="forwardScope" value="thread">
-            <span>Full thread (chronological)</span>
+            <span>${esc(t('compose.forwardFullThread'))}</span>
           </label>
         </div>` : '';
 
   const bodyPlaceholder = mode === 'forward'
-    ? 'Optional note (appears above forwarded content)...'
-    : 'Write your message...';
+    ? t('compose.bodyPlaceholderForward')
+    : t('compose.bodyPlaceholderCompose');
 
   currentView = { type: 'compose' };
   const container = document.getElementById('main');
   container.innerHTML = `
     <div class="card">
-      <h2>${title}</h2>
+      <h2>${esc(title)}</h2>
       <div class="compose-form">
         <div class="compose-to-wrap">
-          <label>To</label>
-          <input id="composeTo" type="text" placeholder="Type agent name or address..." value="${esc(prefillTo || '')}" autocomplete="off">
+          <label>${esc(t('compose.labelTo'))}</label>
+          <input id="composeTo" type="text" placeholder="${esc(t('compose.toPlaceholder'))}" value="${esc(prefillTo || '')}" autocomplete="off">
           <div class="compose-to-dropdown" id="composeToDropdown"></div>
         </div>
         <div>
-          <label>Subject</label>
-          <input id="composeSubject" type="text" placeholder="Subject..." value="${esc(prefillSubject || '')}">
+          <label>${esc(t('compose.labelSubject'))}</label>
+          <input id="composeSubject" type="text" placeholder="${esc(t('compose.subjectPlaceholder'))}" value="${esc(prefillSubject || '')}">
         </div>
         ${forwardScopeBlock}
         <div>
-          <label>Body <span style="font-weight:normal;color:var(--muted);font-size:11px">— type @ to insert image or memory reference</span></label>
+          <label>${esc(t('compose.labelBody'))} <span style="font-weight:normal;color:var(--muted);font-size:11px">${esc(t('compose.labelAtHint'))}</span></label>
           <textarea id="composeBody" placeholder="${esc(bodyPlaceholder)}"></textarea>
           <div class="compose-at-dropdown" id="composeAtDropdown"></div>
         </div>
         <div>
-          <label>Attachments</label>
+          <label>${esc(t('compose.attachments'))}</label>
           <div class="compose-upload-zone" id="composeUploadZone">
-            <div class="upload-hint">Drop images here, paste (Ctrl+V), or <label class="upload-browse" for="composeFileInput">browse</label></div>
+            <div class="upload-hint">${esc(t('compose.uploadHint'))} <label class="upload-browse" for="composeFileInput">${esc(t('compose.uploadBrowse'))}</label></div>
             <input type="file" id="composeFileInput" accept="image/png,image/jpeg,image/gif,image/webp" multiple style="display:none">
           </div>
           <div class="compose-attachments" id="composeAttachments"></div>
         </div>
         ${originalBody ? (originalBodyHtml ? `
         <div>
-          <label style="color:var(--muted)">Reference (source message)</label>
+          <label style="color:var(--muted)">${esc(t('compose.reference'))}</label>
           <div class="markdown-body compose-original-md" data-md-html="${mdDataAttr(originalBodyHtml)}"></div>
         </div>` : `
         <div>
-          <label style="color:var(--muted)">Reference (source message)</label>
+          <label style="color:var(--muted)">${esc(t('compose.reference'))}</label>
           <div class="compose-original-md" style="white-space:pre-wrap;color:var(--muted)">${esc(originalBody)}</div>
         </div>`) : ''}
         <input type="hidden" id="composeParentId" value="${prefillParentId || ''}">
         <input type="hidden" id="composeMode" value="${esc(mode)}">
         <div style="display:flex;gap:12px;align-items:center">
-          <button class="btn btn-primary" id="sendBtn" onclick="doSend()">Send</button>
+          <button class="btn btn-primary" id="sendBtn" onclick="doSend()">${esc(t('compose.send'))}</button>
           <div id="composeStatus"></div>
         </div>
       </div>
@@ -995,7 +995,7 @@ function renderComposeAttachments() {
   if (composeUploadedFiles.length === 0) { container.innerHTML = ''; return; }
   container.innerHTML = composeUploadedFiles.map((f, i) => `
     <div class="compose-attachment-item">
-      <img src="${esc(f.url)}" class="compose-attachment-thumb" alt="${esc(f.filename)}" onclick="previewImage('${esc(f.url)}', '${esc(f.filename)}')" style="cursor:pointer" title="Click to preview">
+      <img src="${esc(f.url)}" class="compose-attachment-thumb" alt="${esc(f.filename)}" onclick="previewImage('${esc(f.url)}', '${esc(f.filename)}')" style="cursor:pointer" title="${esc(t('compose.clickPreview'))}">
       <div class="compose-attachment-info">
         <span class="compose-attachment-name">${esc(f.filename)}</span>
         <span class="compose-attachment-size">${(f.size / 1024).toFixed(1)} KB</span>
@@ -1013,7 +1013,7 @@ function removeComposeAttachment(idx) {
 async function uploadFile(file) {
   const zone = document.getElementById('composeUploadZone');
   const hint = zone?.querySelector('.upload-hint');
-  if (hint) hint.textContent = 'Uploading...';
+  if (hint) hint.textContent = t('compose.uploading');
   try {
     const formData = new FormData();
     formData.append('file', file);
@@ -1024,7 +1024,7 @@ async function uploadFile(file) {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || 'Upload failed');
+      throw new Error(err.detail || t('compose.uploadFailed'));
     }
     const data = await resp.json();
     composeUploadedFiles.push(data);
@@ -1033,10 +1033,10 @@ async function uploadFile(file) {
     const status = document.getElementById('composeStatus');
     if (status) {
       status.className = 'compose-status error';
-      status.textContent = 'Upload error: ' + e.message;
+      status.textContent = t('compose.uploadError') + e.message;
     }
   } finally {
-    if (hint) hint.innerHTML = 'Drop images here, paste (Ctrl+V), or <label class="upload-browse" for="composeFileInput">browse</label>';
+    if (hint) hint.innerHTML = esc(t('compose.uploadHint')) + ' <label class="upload-browse" for="composeFileInput">' + esc(t('compose.uploadBrowse')) + '</label>';
   }
 }
 
@@ -1201,7 +1201,7 @@ function hydrateComposeToInput() {
       ? agents.filter(a => a.name.toLowerCase().includes(q) || a.address.toLowerCase().includes(q))
       : agents;
     if (matches.length === 0) {
-      dropdown.innerHTML = '<div class="compose-to-empty">No matching agents</div>';
+      dropdown.innerHTML = `<div class="compose-to-empty">${esc(t('compose.noMatchAgents'))}</div>`;
       dropdown.classList.add('visible');
       return;
     }
@@ -1294,7 +1294,7 @@ function forwardToMsg(msgId, ev) {
   const m = msgCache[msgId];
   if (!m) return;
   const subj = (m.subject || '').trim();
-  const fwdSubject = subj && /^fwd:/i.test(subj) ? subj : `Fwd: ${subj || '(no subject)'}`;
+  const fwdSubject = subj && /^fwd:/i.test(subj) ? subj : `Fwd: ${subj || t('common.noSubject')}`;
   showCompose('', fwdSubject, m.id, m.body, m.body_html, { mode: 'forward' });
 }
 
@@ -1311,7 +1311,7 @@ async function doSend() {
   // Validate address exists
   if (!agents.some(a => a.address === toValue)) {
     status.className = 'compose-status error';
-    status.textContent = 'Error: Address "' + toValue + '" does not exist. Please select a valid agent.';
+    status.textContent = t('compose.errorAddressInvalid', { addr: toValue });
     btn.disabled = false;
     return;
   }
@@ -1341,14 +1341,14 @@ async function doSend() {
       body: JSON.stringify(body),
     });
     status.className = 'compose-status success';
-    status.textContent = 'Message sent!';
+    status.textContent = t('compose.sent');
     document.getElementById('composeBody').value = '';
     document.getElementById('composeSubject').value = '';
     document.getElementById('composeParentId').value = '';
     await refreshSidebar();
   } catch (e) {
     status.className = 'compose-status error';
-    status.textContent = 'Error: ' + e.message;
+    status.textContent = t('compose.errorPrefix') + e.message;
   } finally {
     btn.disabled = false;
   }
@@ -1369,26 +1369,26 @@ async function renderStats() {
   await fetchStats();
   const main = document.getElementById('main');
   if (statsData.length === 0) {
-    main.innerHTML = '<div class="card"><h2>Agent Statistics</h2><div class="empty">No agents registered.</div></div>';
+    main.innerHTML = `<div class="card"><h2>${esc(t('stats.title'))}</h2><div class="empty">${esc(t('stats.empty'))}</div></div>`;
     return;
   }
   main.innerHTML = `
     <div class="card">
-      <h2>Agent Statistics</h2>
+      <h2>${esc(t('stats.title'))}</h2>
       <div class="stats-table-wrap">
       <table class="stats-table">
         <thead>
           <tr>
-            <th>Name</th><th>Status</th><th>Address</th><th>Role</th>
-            <th class="stat-num">Received</th><th class="stat-num">Read</th><th class="stat-num">Unread</th>
-            <th class="stat-num">Sent</th><th class="stat-num">Replied</th><th class="stat-num">Forwarded</th>
+            <th>${esc(t('stats.colName'))}</th><th>${esc(t('stats.colStatus'))}</th><th>${esc(t('stats.colAddress'))}</th><th>${esc(t('stats.colRole'))}</th>
+            <th class="stat-num">${esc(t('stats.colReceived'))}</th><th class="stat-num">${esc(t('stats.colRead'))}</th><th class="stat-num">${esc(t('stats.colUnread'))}</th>
+            <th class="stat-num">${esc(t('stats.colSent'))}</th><th class="stat-num">${esc(t('stats.colReplied'))}</th><th class="stat-num">${esc(t('stats.colForwarded'))}</th>
           </tr>
         </thead>
         <tbody>
           ${statsData.map(a => `
             <tr>
               <td><strong>${esc(a.name)}</strong></td>
-              <td style="text-align:center"><span class="status-dot status-${a.status || 'offline'}" title="${a.status === 'online' ? '在线' : a.status === 'idle' ? '空闲' : '离线'}"></span></td>
+              <td style="text-align:center"><span class="status-dot status-${a.status || 'offline'}" title="${esc(_statusTitle(a.status))}"></span></td>
               <td style="color:var(--muted)">${esc(a.address)}</td>
               <td>${esc(a.role)}</td>
               <td class="stat-num">${a.messages_received}</td>
@@ -1422,30 +1422,30 @@ async function renderApiKeys(newKeyData) {
   try {
     keys = await api('/users/api-keys');
   } catch (e) {
-    main.innerHTML = `<div class="card"><p class="empty">Failed to load API keys: ${esc(e.message)}</p></div>`;
+    main.innerHTML = `<div class="card"><p class="empty">${esc(t('apikeys.loadFailed', { msg: e.message }))}</p></div>`;
     return;
   }
 
   const newKeyHtml = newKeyData ? `
     <div class="apikey-new-box">
-      <div class="apikey-warning">&#9888; This key will only be shown once. Copy it now!</div>
+      <div class="apikey-warning">${esc(t('apikeys.warnOnce'))}</div>
       <div class="apikey-value" id="newKeyValue">${esc(newKeyData.raw_key)}</div>
-      <button class="btn-sm" onclick="copyNewKey()">Copy</button>
+      <button class="btn-sm" onclick="copyNewKey()">${esc(t('apikeys.copy'))}</button>
       <span id="newKeyCopyStatus" style="font-size:12px;color:var(--success);margin-left:8px"></span>
     </div>` : '';
 
   const keysTableHtml = keys.length === 0
-    ? '<div class="empty" style="padding:20px 0">No API keys yet.</div>'
+    ? `<div class="empty" style="padding:20px 0">${esc(t('apikeys.noKeys'))}</div>`
     : `<div style="overflow-x:auto">
       <table class="apikey-table">
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Key</th>
-            <th>Created</th>
-            <th>Last Used</th>
-            <th>Status</th>
-            <th>Action</th>
+            <th>${esc(t('apikeys.colName'))}</th>
+            <th>${esc(t('apikeys.colKey'))}</th>
+            <th>${esc(t('apikeys.colCreated'))}</th>
+            <th>${esc(t('apikeys.colLastUsed'))}</th>
+            <th>${esc(t('apikeys.colStatus'))}</th>
+            <th>${esc(t('apikeys.colAction'))}</th>
           </tr>
         </thead>
         <tbody>
@@ -1455,12 +1455,12 @@ async function renderApiKeys(newKeyData) {
               <td class="apikey-masked">${esc(k.masked_key || maskKey(k.key_prefix))}</td>
               <td style="color:var(--muted);font-size:12px">${esc(fmtTime(k.created_at))}</td>
               <td style="color:var(--muted);font-size:12px">${k.last_used_at ? esc(fmtTime(k.last_used_at)) : '—'}</td>
-              <td><span class="${k.is_active !== false ? 'apikey-status-active' : 'apikey-status-inactive'}">${k.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+              <td><span class="${k.is_active !== false ? 'apikey-status-active' : 'apikey-status-inactive'}">${k.is_active !== false ? esc(t('apikeys.active')) : esc(t('apikeys.inactive'))}</span></td>
               <td style="display:flex;gap:6px;flex-wrap:wrap">
                 ${k.is_active !== false
-                  ? `<button class="btn-danger-sm" onclick="deactivateApiKey('${esc(k.id)}', '${esc(k.name)}')">Deactivate</button>`
-                  : `<button class="btn-sm" onclick="reactivateApiKey('${esc(k.id)}', '${esc(k.name)}')">Reactivate</button>`}
-                <button class="btn-danger-sm" onclick="deleteApiKey('${esc(k.id)}', '${esc(k.name)}')">Delete</button>
+                  ? `<button class="btn-danger-sm" onclick="deactivateApiKey('${esc(k.id)}', '${esc(k.name)}')">${esc(t('apikeys.deactivate'))}</button>`
+                  : `<button class="btn-sm" onclick="reactivateApiKey('${esc(k.id)}', '${esc(k.name)}')">${esc(t('apikeys.reactivate'))}</button>`}
+                <button class="btn-danger-sm" onclick="deleteApiKey('${esc(k.id)}', '${esc(k.name)}')">${esc(t('apikeys.delete'))}</button>
               </td>
             </tr>
           `).join('')}
@@ -1470,36 +1470,36 @@ async function renderApiKeys(newKeyData) {
 
   main.innerHTML = `
     <div class="card">
-      <h2>API Keys</h2>
+      <h2>${esc(t('apikeys.title'))}</h2>
       ${newKeyHtml}
       <div style="margin-bottom:20px">
-        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Create New Key</h3>
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">${esc(t('apikeys.createSection'))}</h3>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input type="text" id="newKeyName" placeholder="Key name (e.g. my-agent)" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;min-width:200px">
-          <button class="btn btn-primary" onclick="createApiKey()">Create</button>
+          <input type="text" id="newKeyName" placeholder="${esc(t('apikeys.newKeyPlaceholder'))}" style="padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;min-width:200px">
+          <button class="btn btn-primary" onclick="createApiKey()">${esc(t('apikeys.create'))}</button>
           <span id="createKeyStatus" style="font-size:13px"></span>
         </div>
       </div>
-      <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">Your Keys</h3>
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:10px">${esc(t('apikeys.yourKeys'))}</h3>
       ${keysTableHtml}
     </div>
     <div class="card">
-      <h2>Change Password</h2>
+      <h2>${esc(t('apikeys.changePassword'))}</h2>
       <div class="compose-form" style="max-width:400px">
         <div>
-          <label>Current Password</label>
-          <input type="password" id="currentPassword" placeholder="Enter current password">
+          <label>${esc(t('apikeys.currentPassword'))}</label>
+          <input type="password" id="currentPassword" placeholder="${esc(t('apikeys.currentPasswordPlaceholder'))}">
         </div>
         <div>
-          <label>New Password</label>
-          <input type="password" id="newPassword" placeholder="Enter new password (min 8 chars)">
+          <label>${esc(t('apikeys.newPassword'))}</label>
+          <input type="password" id="newPassword" placeholder="${esc(t('apikeys.newPasswordPlaceholder'))}">
         </div>
         <div>
-          <label>Confirm New Password</label>
-          <input type="password" id="confirmPassword" placeholder="Confirm new password">
+          <label>${esc(t('apikeys.confirmPassword'))}</label>
+          <input type="password" id="confirmPassword" placeholder="${esc(t('apikeys.confirmPasswordPlaceholder'))}">
         </div>
         <div style="display:flex;gap:12px;align-items:center">
-          <button class="btn btn-primary" onclick="changePassword()">Update Password</button>
+          <button class="btn btn-primary" onclick="changePassword()">${esc(t('apikeys.updatePassword'))}</button>
           <div id="passwordStatus"></div>
         </div>
       </div>
@@ -1516,7 +1516,7 @@ function copyNewKey() {
   if (!keyEl) return;
   navigator.clipboard.writeText(keyEl.textContent).then(() => {
     const status = document.getElementById('newKeyCopyStatus');
-    if (status) { status.textContent = 'Copied!'; setTimeout(() => { status.textContent = ''; }, 2000); }
+    if (status) { status.textContent = t('apikeys.copied'); setTimeout(() => { status.textContent = ''; }, 2000); }
   }).catch(() => {
     const range = document.createRange();
     range.selectNodeContents(keyEl);
@@ -1530,7 +1530,7 @@ async function createApiKey() {
   const statusEl = document.getElementById('createKeyStatus');
   const name = nameInput ? nameInput.value.trim() : '';
   if (!name) {
-    if (statusEl) { statusEl.textContent = 'Please enter a key name.'; statusEl.style.color = 'var(--danger)'; }
+    if (statusEl) { statusEl.textContent = t('apikeys.enterName'); statusEl.style.color = 'var(--danger)'; }
     return;
   }
   try {
@@ -1541,18 +1541,18 @@ async function createApiKey() {
     });
     await renderApiKeys(result);
   } catch (e) {
-    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+    if (statusEl) { statusEl.textContent = t('common.errorPrefix') + e.message; statusEl.style.color = 'var(--danger)'; }
   }
 }
 
 async function deactivateApiKey(keyId, keyName) {
-  const ok = await showConfirm('Deactivate API Key', `Deactivate key "${keyName}"? It will stop working immediately.`, 'Deactivate');
+  const ok = await showConfirm(t('apikeys.confirmDeactivateTitle'), t('apikeys.confirmDeactivate', { name: keyName }), t('apikeys.deactivate'));
   if (!ok) return;
   try {
     await api(`/users/api-keys/${encodeURIComponent(keyId)}/deactivate`, { method: 'POST' });
     await renderApiKeys();
   } catch (e) {
-    alert('Failed: ' + e.message);
+    alert(t('common.failedPrefix') + e.message);
   }
 }
 
@@ -1561,18 +1561,18 @@ async function reactivateApiKey(keyId, keyName) {
     await api(`/users/api-keys/${encodeURIComponent(keyId)}/reactivate`, { method: 'POST' });
     await renderApiKeys();
   } catch (e) {
-    alert('Failed: ' + e.message);
+    alert(t('common.failedPrefix') + e.message);
   }
 }
 
 async function deleteApiKey(keyId, keyName) {
-  const ok = await showConfirm('Delete API Key', `Permanently delete key "${keyName}"? This cannot be undone.`, 'Delete');
+  const ok = await showConfirm(t('apikeys.confirmDeleteTitle'), t('apikeys.confirmDelete', { name: keyName }), t('common.delete'));
   if (!ok) return;
   try {
     await api(`/users/api-keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' });
     await renderApiKeys();
   } catch (e) {
-    alert('Failed: ' + e.message);
+    alert(t('common.failedPrefix') + e.message);
   }
 }
 
@@ -1586,17 +1586,17 @@ async function changePassword() {
 
   if (!current || !newPw || !confirm) {
     status.className = 'compose-status error';
-    status.textContent = 'Please fill in all fields.';
+    status.textContent = t('apikeys.fillAllFields');
     return;
   }
   if (newPw !== confirm) {
     status.className = 'compose-status error';
-    status.textContent = 'New passwords do not match.';
+    status.textContent = t('apikeys.passwordMismatch');
     return;
   }
   if (newPw.length < 8) {
     status.className = 'compose-status error';
-    status.textContent = 'New password must be at least 8 characters.';
+    status.textContent = t('apikeys.passwordTooShort');
     return;
   }
   try {
@@ -1606,13 +1606,13 @@ async function changePassword() {
       body: JSON.stringify({ current_password: current, new_password: newPw }),
     });
     status.className = 'compose-status success';
-    status.textContent = 'Password changed successfully.';
+    status.textContent = t('apikeys.passwordChanged');
     document.getElementById('currentPassword').value = '';
     document.getElementById('newPassword').value = '';
     document.getElementById('confirmPassword').value = '';
   } catch (e) {
     status.className = 'compose-status error';
-    status.textContent = 'Error: ' + e.message;
+    status.textContent = t('common.errorPrefix') + e.message;
   }
 }
 
@@ -1630,7 +1630,7 @@ async function showAdmin() {
 async function renderAdmin() {
   if (currentView?.type !== 'admin') return;
   const main = document.getElementById('main');
-  main.innerHTML = '<div class="empty">Loading...</div>';
+  main.innerHTML = `<div class="empty">${esc(t('common.loading'))}</div>`;
 
   let users = [], inviteCodes = [];
   try {
@@ -1639,30 +1639,30 @@ async function renderAdmin() {
       api('/superadmin/invite-codes'),
     ]);
   } catch (e) {
-    main.innerHTML = `<div class="card"><p class="empty">Failed to load admin data: ${esc(e.message)}</p></div>`;
+    main.innerHTML = `<div class="card"><p class="empty">${esc(t('admin.loadFailed', { msg: e.message }))}</p></div>`;
     return;
   }
 
   const usersHtml = users.length === 0
-    ? '<div class="empty" style="padding:16px 0">No users.</div>'
+    ? `<div class="empty" style="padding:16px 0">${esc(t('admin.noUsers'))}</div>`
     : `<table class="admin-table">
-        <thead><tr><th>Username</th><th>Role</th><th>Created</th><th>Action</th></tr></thead>
+        <thead><tr><th>${esc(t('admin.colUsername'))}</th><th>${esc(t('admin.colRole'))}</th><th>${esc(t('admin.colCreated'))}</th><th>${esc(t('admin.colAction'))}</th></tr></thead>
         <tbody>
           ${users.map(u => `
             <tr>
               <td><strong>${esc(u.username)}</strong></td>
-              <td>${u.is_superadmin ? '<span class="superadmin-badge">Superadmin</span>' : '<span style="color:var(--muted);font-size:12px">User</span>'}</td>
+              <td>${u.is_superadmin ? `<span class="superadmin-badge">${esc(t('admin.roleSuperadmin'))}</span>` : `<span style="color:var(--muted);font-size:12px">${esc(t('admin.roleUser'))}</span>`}</td>
               <td style="color:var(--muted);font-size:12px">${esc(fmtTime(u.created_at))}</td>
-              <td><button class="btn-sm" onclick="loginAs('${esc(u.id)}', '${esc(u.username)}')">Login As</button></td>
+              <td><button class="btn-sm" onclick="loginAs('${esc(u.id)}', '${esc(u.username)}')">${esc(t('admin.loginAs'))}</button></td>
             </tr>
           `).join('')}
         </tbody>
       </table>`;
 
   const codesHtml = inviteCodes.length === 0
-    ? '<div class="empty" style="padding:16px 0">No invite codes generated.</div>'
+    ? `<div class="empty" style="padding:16px 0">${esc(t('admin.noCodes'))}</div>`
     : `<table class="admin-table">
-        <thead><tr><th>Code</th><th>Used By</th><th>Created</th></tr></thead>
+        <thead><tr><th>${esc(t('admin.colCode'))}</th><th>${esc(t('admin.colUsedBy'))}</th><th>${esc(t('admin.colCreated'))}</th></tr></thead>
         <tbody>
           ${inviteCodes.map(c => `
             <tr>
@@ -1676,17 +1676,17 @@ async function renderAdmin() {
 
   main.innerHTML = `
     <div class="card">
-      <h2>Admin Panel</h2>
+      <h2>${esc(t('admin.title'))}</h2>
 
       <div class="admin-section">
-        <h3>Users</h3>
+        <h3>${esc(t('admin.users'))}</h3>
         ${usersHtml}
       </div>
 
       <div class="admin-section">
-        <h3>Invite Codes</h3>
+        <h3>${esc(t('admin.inviteCodes'))}</h3>
         <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px">
-          <button class="btn btn-primary" onclick="generateInviteCode()">Generate Invite Code</button>
+          <button class="btn btn-primary" onclick="generateInviteCode()">${esc(t('admin.generateCode'))}</button>
           <span id="inviteCodeStatus" style="font-size:13px"></span>
         </div>
         <div id="inviteCodesTable">${codesHtml}</div>
@@ -1699,7 +1699,7 @@ async function generateInviteCode() {
   try {
     const result = await api('/superadmin/invite-codes', { method: 'POST' });
     if (statusEl) {
-      statusEl.textContent = 'Generated: ' + (result.code || '');
+      statusEl.textContent = t('admin.generated', { code: result.code || '' });
       statusEl.style.color = 'var(--success)';
       setTimeout(() => { statusEl.textContent = ''; }, 5000);
     }
@@ -1707,7 +1707,7 @@ async function generateInviteCode() {
     const tableEl = document.getElementById('inviteCodesTable');
     if (tableEl && codes.length > 0) {
       tableEl.innerHTML = `<table class="admin-table">
-        <thead><tr><th>Code</th><th>Used By</th><th>Created</th></tr></thead>
+        <thead><tr><th>${esc(t('admin.colCode'))}</th><th>${esc(t('admin.colUsedBy'))}</th><th>${esc(t('admin.colCreated'))}</th></tr></thead>
         <tbody>
           ${codes.map(c => `
             <tr>
@@ -1720,27 +1720,27 @@ async function generateInviteCode() {
       </table>`;
     }
   } catch (e) {
-    if (statusEl) { statusEl.textContent = 'Error: ' + e.message; statusEl.style.color = 'var(--danger)'; }
+    if (statusEl) { statusEl.textContent = t('common.errorPrefix') + e.message; statusEl.style.color = 'var(--danger)'; }
   }
 }
 
 async function loginAs(userId, username) {
-  const ok = await showConfirm('Login As User', `Switch to acting as "${username}"?`, 'Confirm');
+  const ok = await showConfirm(t('admin.confirmLoginAsTitle'), t('admin.confirmLoginAs', { name: username }), t('common.confirm'));
   if (!ok) return;
   try {
     await api(`/superadmin/login-as/${encodeURIComponent(userId)}`, { method: 'POST' });
     window.location.reload();
   } catch (e) {
-    alert('Failed: ' + e.message);
+    alert(t('common.failedPrefix') + e.message);
   }
 }
 
 // --- Delete agent ---
 async function deleteAgent(agentId, agentName) {
   const ok = await showConfirm(
-    '删除 Agent',
-    `确定要删除 Agent "${agentName}" 吗？此操作不可撤销。`,
-    '删除',
+    t('agent.deleteTitle'),
+    t('agent.deleteConfirm', { name: agentName }),
+    t('common.delete'),
   );
   if (!ok) return;
   try {
@@ -1748,10 +1748,10 @@ async function deleteAgent(agentId, agentName) {
     if (currentView?.type === 'inbox') {
       currentView = null;
       document.getElementById('main').innerHTML =
-        '<div class="empty">Agent has been deleted.</div>';
+        `<div class="empty">${esc(t('empty.agentDeleted'))}</div>`;
     }
     await refreshSidebar();
   } catch (e) {
-    alert('Delete failed: ' + e.message);
+    alert(t('agent.deleteFailed', { msg: e.message }));
   }
 }

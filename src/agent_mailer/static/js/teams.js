@@ -32,20 +32,20 @@ async function renderTeams() {
 
   const teamsHtml = teamsData.length === 0
     ? `<div class="empty" style="padding:32px 0;text-align:center">
-        <p>No teams yet.</p>
-        <p class="team-empty-hint">Create a team to organize your agents into groups with isolated contact visibility.</p>
-        <button class="btn btn-primary" onclick="showCreateTeamForm()">+ Create Your First Team</button>
+        <p>${esc(t('teams.empty'))}</p>
+        <p class="team-empty-hint">${esc(t('teams.emptyHint'))}</p>
+        <button class="btn btn-primary" onclick="showCreateTeamForm()">${esc(t('teams.createFirst'))}</button>
       </div>`
-    : `<div class="teams-grid">${teamsData.map(t => `
-        <div class="team-card" onclick="showTeamDetail('${esc(t.id)}')">
-          <div class="team-card-icon">${t.agent_count > 0
-            ? `<span class="team-card-avatar-count">${t.agent_count}</span>`
+    : `<div class="teams-grid">${teamsData.map(tm => `
+        <div class="team-card" onclick="showTeamDetail('${esc(tm.id)}')">
+          <div class="team-card-icon">${tm.agent_count > 0
+            ? `<span class="team-card-avatar-count">${tm.agent_count}</span>`
             : '<span class="team-card-avatar-empty">0</span>'}</div>
-          <div class="team-card-name">${esc(t.name)}</div>
-          <div class="team-card-desc">${esc(t.description) || '<span class="text-muted">No description</span>'}</div>
+          <div class="team-card-name">${esc(tm.name)}</div>
+          <div class="team-card-desc">${esc(tm.description) || `<span class="text-muted">${esc(t('teams.noDescription'))}</span>`}</div>
           <div class="team-card-footer">
-            <span class="team-agent-count">${t.agent_count} agent${t.agent_count !== 1 ? 's' : ''}</span>
-            <span class="team-card-time">${esc(fmtTime(t.created_at))}</span>
+            <span class="team-agent-count">${tm.agent_count} ${esc(t('teams.agents'))}</span>
+            <span class="team-card-time">${esc(fmtTime(tm.created_at))}</span>
           </div>
         </div>
       `).join('')}</div>`;
@@ -53,8 +53,8 @@ async function renderTeams() {
   main.innerHTML = `
     <div class="card">
       <div class="card-header-row">
-        <h2>Teams</h2>
-        ${teamsData.length > 0 ? '<button class="btn btn-primary" onclick="showCreateTeamForm()">+ Create Team</button>' : ''}
+        <h2>${esc(t('teams.title'))}</h2>
+        ${teamsData.length > 0 ? `<button class="btn btn-primary" onclick="showCreateTeamForm()">${esc(t('teams.create'))}</button>` : ''}
       </div>
       ${teamsHtml}
     </div>`;
@@ -65,20 +65,20 @@ function showCreateTeamForm() {
   const main = document.getElementById('main');
   main.innerHTML = `
     <div class="card">
-      <button type="button" class="back-btn" onclick="showTeams()">&larr; Back to Teams</button>
-      <h2>Create Team</h2>
+      <button type="button" class="back-btn" onclick="showTeams()">${esc(t('teams.backList'))}</button>
+      <h2>${esc(t('teams.createTitle'))}</h2>
       <div class="compose-form">
         <div>
-          <label for="teamName">Team Name</label>
-          <input type="text" id="teamName" placeholder="e.g. Frontend, Backend, DevOps...">
+          <label for="teamName">${esc(t('teams.name'))}</label>
+          <input type="text" id="teamName" placeholder="${esc(t('teams.namePlaceholder'))}">
         </div>
         <div>
-          <label for="teamDesc">Description</label>
-          <input type="text" id="teamDesc" placeholder="Brief description of this team's purpose (optional)">
+          <label for="teamDesc">${esc(t('teams.description'))}</label>
+          <input type="text" id="teamDesc" placeholder="${esc(t('teams.descPlaceholder'))}">
         </div>
         <div id="teamFormError" class="login-error" style="display:none"></div>
         <div>
-          <button class="btn btn-primary" id="createTeamBtn" onclick="doCreateTeam()">Create Team</button>
+          <button class="btn btn-primary" id="createTeamBtn" onclick="doCreateTeam()">${esc(t('teams.createBtn'))}</button>
         </div>
       </div>
     </div>`;
@@ -89,7 +89,7 @@ async function doCreateTeam() {
   const description = document.getElementById('teamDesc').value.trim();
   const errEl = document.getElementById('teamFormError');
   if (!name) {
-    errEl.textContent = 'Team name is required';
+    errEl.textContent = t('teams.nameRequired');
     errEl.style.display = 'block';
     return;
   }
@@ -120,8 +120,8 @@ async function renderTeamDetail(teamId) {
     team = await fetchTeamDetail(teamId);
   } catch (e) {
     main.innerHTML = `<div class="card">
-      <button type="button" class="back-btn" onclick="showTeams()">&larr; Back to Teams</button>
-      <p class="empty">Team not found.</p></div>`;
+      <button type="button" class="back-btn" onclick="showTeams()">${esc(t('teams.backList'))}</button>
+      <p class="empty">${esc(t('teams.notFound'))}</p></div>`;
     return;
   }
 
@@ -131,16 +131,16 @@ async function renderTeamDetail(teamId) {
 
   // Members table
   const membersHtml = team.agents.length === 0
-    ? '<div class="empty" style="padding:16px 0">暂无成员，请在下方添加 Agent</div>'
+    ? `<div class="empty" style="padding:16px 0">${esc(t('teams.membersEmpty'))}</div>`
     : `<div class="stats-table-wrap">
         <table class="stats-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Role</th>
-              <th>Address</th>
-              <th>Status</th>
-              <th>Action</th>
+              <th>${esc(t('teams.colName'))}</th>
+              <th>${esc(t('teams.colRole'))}</th>
+              <th>${esc(t('teams.colAddress'))}</th>
+              <th>${esc(t('teams.colStatus'))}</th>
+              <th>${esc(t('teams.colAction'))}</th>
             </tr>
           </thead>
           <tbody>
@@ -149,8 +149,8 @@ async function renderTeamDetail(teamId) {
                 <td><strong>${esc(a.name)}</strong></td>
                 <td>${esc(a.role)}</td>
                 <td class="text-muted">${esc(a.address)}</td>
-                <td><span class="status-dot status-${a.status || 'offline'}" title="${a.status === 'online' ? '在线' : a.status === 'idle' ? '空闲' : '离线'}"></span> ${a.status || 'offline'}</td>
-                <td><button class="btn-danger-sm" onclick="removeAgentFromTeam('${esc(team.id)}', '${esc(a.id)}', '${esc(a.name)}')">Remove</button></td>
+                <td><span class="status-dot status-${a.status || 'offline'}" title="${esc(_statusTitle(a.status))}"></span> ${esc(a.status || 'offline')}</td>
+                <td><button class="btn-danger-sm" onclick="removeAgentFromTeam('${esc(team.id)}', '${esc(a.id)}', '${esc(a.name)}')">${esc(t('teams.remove'))}</button></td>
               </tr>
             `).join('')}
           </tbody>
@@ -160,20 +160,20 @@ async function renderTeamDetail(teamId) {
   // Add agent section
   let addAgentHtml;
   if (unassigned.length === 0) {
-    addAgentHtml = '<div class="empty" style="padding:12px 0;font-size:12px">All agents are already assigned to teams. Create new agents or remove existing ones from other teams first.</div>';
+    addAgentHtml = `<div class="empty" style="padding:12px 0;font-size:12px">${esc(t('teams.allAssigned'))}</div>`;
   } else {
     addAgentHtml = `
-      <p class="team-section-hint">Select an unassigned agent to add to this team. Each agent can only belong to one team.</p>
+      <p class="team-section-hint">${esc(t('teams.addMemberHint'))}</p>
       <div class="compose-form">
         <div>
-          <label for="addAgentSelect">Agent</label>
+          <label for="addAgentSelect">${esc(t('teams.addMemberLabel'))}</label>
           <select id="addAgentSelect">
-            <option value="">-- Select an agent to add --</option>
+            <option value="">${esc(t('teams.addMemberSelect'))}</option>
             ${unassigned.map(a => `<option value="${esc(a.id)}">${esc(a.name)} (${esc(a.role)}) — ${esc(a.address)}</option>`).join('')}
           </select>
         </div>
         <div>
-          <button class="btn btn-primary" onclick="addAgentToTeam('${esc(team.id)}')">Add to Team</button>
+          <button class="btn btn-primary" onclick="addAgentToTeam('${esc(team.id)}')">${esc(t('teams.addMemberBtn'))}</button>
         </div>
       </div>`;
   }
@@ -185,77 +185,77 @@ async function renderTeamDetail(teamId) {
   } catch (e) { /* ignore */ }
 
   const memoriesListHtml = memories.length === 0
-    ? '<div class="empty" style="padding:12px 0">No shared memories yet.</div>'
+    ? `<div class="empty" style="padding:12px 0">${esc(t('teams.noMemories'))}</div>`
     : memories.map(m => `
         <div class="memory-item" id="memory-${esc(m.id)}">
           <div class="memory-item-header" onclick="toggleMemoryEdit('${esc(teamId)}', '${esc(m.id)}')">
             <div class="memory-item-title">${esc(m.title)}</div>
             <div class="memory-item-meta">
               <span class="text-muted">${esc(fmtTime(m.updated_at))}</span>
-              <button class="memory-copy-btn" onclick="event.stopPropagation(); copyMemoryUrl('${esc(m.id)}')" title="Copy URL">Copy URL</button>
-              <button class="btn-danger-sm" onclick="event.stopPropagation(); doDeleteMemory('${esc(teamId)}', '${esc(m.id)}', '${esc(m.title)}')">Delete</button>
+              <button class="memory-copy-btn" onclick="event.stopPropagation(); copyMemoryUrl('${esc(m.id)}')" title="${esc(t('teams.copyUrl'))}">${esc(t('teams.copyUrl'))}</button>
+              <button class="btn-danger-sm" onclick="event.stopPropagation(); doDeleteMemory('${esc(teamId)}', '${esc(m.id)}', '${esc(m.title)}')">${esc(t('teams.delete'))}</button>
             </div>
           </div>
           <div class="memory-edit-form" id="memoryEdit-${esc(m.id)}" style="display:none">
             <div>
-              <label>Title</label>
+              <label>${esc(t('teams.memoryTitle'))}</label>
               <input type="text" id="memoryTitle-${esc(m.id)}" value="${esc(m.title)}" maxlength="100">
             </div>
             <div>
-              <label>Content <span class="memory-char-count" id="memoryCount-${esc(m.id)}">${(m.content || '').length}/200000</span></label>
+              <label>${esc(t('teams.memoryContent'))} <span class="memory-char-count" id="memoryCount-${esc(m.id)}">${(m.content || '').length}/200000</span></label>
               <textarea id="memoryContent-${esc(m.id)}" maxlength="200000" oninput="updateMemoryCharCount('${esc(m.id)}')">${esc(m.content)}</textarea>
             </div>
             <div class="memory-url-row">
               <span class="text-muted" style="font-size:11px">URL: ${location.origin}/memories/${esc(m.id)}</span>
             </div>
             <div style="display:flex;gap:8px">
-              <button class="btn btn-primary" onclick="doUpdateMemory('${esc(teamId)}', '${esc(m.id)}')">Save</button>
-              <button class="btn btn-secondary" onclick="toggleMemoryEdit('${esc(teamId)}', '${esc(m.id)}')">Cancel</button>
+              <button class="btn btn-primary" onclick="doUpdateMemory('${esc(teamId)}', '${esc(m.id)}')">${esc(t('common.save'))}</button>
+              <button class="btn btn-secondary" onclick="toggleMemoryEdit('${esc(teamId)}', '${esc(m.id)}')">${esc(t('common.cancel'))}</button>
             </div>
             <div class="login-error" id="memoryEditError-${esc(m.id)}" style="display:none"></div>
           </div>
         </div>
       `).join('');
 
-  const addMemoryBtnHtml = '<button class="btn btn-primary" onclick="toggleAddMemoryForm()" id="addMemoryBtn">+ Add Memory</button>';
+  const addMemoryBtnHtml = `<button class="btn btn-primary" onclick="toggleAddMemoryForm()" id="addMemoryBtn">${esc(t('teams.addMemory'))}</button>`;
 
   const addMemoryFormHtml = `
     <div id="addMemoryForm" style="display:none">
       <div class="compose-form">
         <div>
-          <label for="newMemoryTitle">Title</label>
-          <input type="text" id="newMemoryTitle" placeholder="Memory title..." maxlength="100">
+          <label for="newMemoryTitle">${esc(t('teams.memoryTitle'))}</label>
+          <input type="text" id="newMemoryTitle" placeholder="${esc(t('teams.memoryTitlePlaceholder'))}" maxlength="100">
         </div>
         <div>
-          <label for="newMemoryContent">Content <span class="memory-char-count" id="newMemoryCount">0/200000</span></label>
-          <textarea id="newMemoryContent" placeholder="Markdown content..." maxlength="200000" oninput="updateNewMemoryCharCount()"></textarea>
+          <label for="newMemoryContent">${esc(t('teams.memoryContent'))} <span class="memory-char-count" id="newMemoryCount">0/200000</span></label>
+          <textarea id="newMemoryContent" placeholder="${esc(t('teams.memoryContentPlaceholder'))}" maxlength="200000" oninput="updateNewMemoryCharCount()"></textarea>
         </div>
         <div id="addMemoryError" class="login-error" style="display:none"></div>
         <div style="display:flex;gap:8px">
-          <button class="btn btn-primary" onclick="doCreateMemory('${esc(teamId)}')">Create</button>
-          <button class="btn btn-secondary" onclick="toggleAddMemoryForm()">Cancel</button>
+          <button class="btn btn-primary" onclick="doCreateMemory('${esc(teamId)}')">${esc(t('common.create'))}</button>
+          <button class="btn btn-secondary" onclick="toggleAddMemoryForm()">${esc(t('common.cancel'))}</button>
         </div>
       </div>
     </div>`;
 
   main.innerHTML = `
     <div class="card">
-      <button type="button" class="back-btn" onclick="showTeams()">&larr; Back to Teams</button>
+      <button type="button" class="back-btn" onclick="showTeams()">${esc(t('teams.backList'))}</button>
       <div class="card-header-row">
         <div>
           <h2>${esc(team.name)}</h2>
-          <p class="team-detail-desc">${esc(team.description) || '<span class="text-muted">No description</span>'}</p>
+          <p class="team-detail-desc">${esc(team.description) || `<span class="text-muted">${esc(t('teams.noDescription'))}</span>`}</p>
         </div>
         <div class="team-detail-actions">
-          <button class="btn btn-secondary" onclick="showEditTeamForm('${esc(team.id)}')">Edit</button>
-          <button class="btn btn-danger" onclick="deleteTeam('${esc(team.id)}', '${esc(team.name)}')">Delete</button>
+          <button class="btn btn-secondary" onclick="showEditTeamForm('${esc(team.id)}')">${esc(t('common.edit'))}</button>
+          <button class="btn btn-danger" onclick="deleteTeam('${esc(team.id)}', '${esc(team.name)}')">${esc(t('teams.delete'))}</button>
         </div>
       </div>
-      <h3 class="team-section-header">团队成员 (${team.agents.length})</h3>
+      <h3 class="team-section-header">${esc(t('teams.membersCount', { n: team.agents.length }))}</h3>
       ${membersHtml}
-      <h3 class="team-section-header">添加成员</h3>
+      <h3 class="team-section-header">${esc(t('teams.addMember'))}</h3>
       ${addAgentHtml}
-      <h3 class="team-section-header">共享记忆 (${memories.length})</h3>
+      <h3 class="team-section-header">${esc(t('teams.sharedMemoriesCount', { n: memories.length }))}</h3>
       ${memoriesListHtml}
       ${addMemoryBtnHtml}
       ${addMemoryFormHtml}
@@ -272,20 +272,20 @@ async function showEditTeamForm(teamId) {
   const main = document.getElementById('main');
   main.innerHTML = `
     <div class="card">
-      <button type="button" class="back-btn" onclick="showTeamDetail('${esc(teamId)}')">&larr; Back</button>
-      <h2>Edit Team</h2>
+      <button type="button" class="back-btn" onclick="showTeamDetail('${esc(teamId)}')">${esc(t('common.back'))}</button>
+      <h2>${esc(t('teams.editTitle'))}</h2>
       <div class="compose-form">
         <div>
-          <label for="editTeamName">Team Name</label>
+          <label for="editTeamName">${esc(t('teams.name'))}</label>
           <input type="text" id="editTeamName" value="${esc(team.name)}">
         </div>
         <div>
-          <label for="editTeamDesc">Description</label>
-          <input type="text" id="editTeamDesc" value="${esc(team.description)}" placeholder="Brief description of this team's purpose (optional)">
+          <label for="editTeamDesc">${esc(t('teams.description'))}</label>
+          <input type="text" id="editTeamDesc" value="${esc(team.description)}" placeholder="${esc(t('teams.descPlaceholder'))}">
         </div>
         <div id="editTeamError" class="login-error" style="display:none"></div>
         <div>
-          <button class="btn btn-primary" onclick="doUpdateTeam('${esc(teamId)}')">Save Changes</button>
+          <button class="btn btn-primary" onclick="doUpdateTeam('${esc(teamId)}')">${esc(t('teams.saveChanges'))}</button>
         </div>
       </div>
     </div>`;
@@ -296,7 +296,7 @@ async function doUpdateTeam(teamId) {
   const description = document.getElementById('editTeamDesc').value.trim();
   const errEl = document.getElementById('editTeamError');
   if (!name) {
-    errEl.textContent = 'Team name is required';
+    errEl.textContent = t('teams.nameRequired');
     errEl.style.display = 'block';
     return;
   }
@@ -314,7 +314,7 @@ async function doUpdateTeam(teamId) {
 }
 
 async function deleteTeam(teamId, teamName) {
-  if (!await showConfirm('Delete Team', `Delete team "${teamName}"? Agents will be unassigned.`, 'Delete')) return;
+  if (!await showConfirm(t('teams.confirmDeleteTitle'), t('teams.confirmDelete', { name: teamName }), t('common.delete'))) return;
   try {
     await api(`/admin/teams/${encodeURIComponent(teamId)}`, { method: 'DELETE' });
     await showTeams();
@@ -340,7 +340,7 @@ async function addAgentToTeam(teamId) {
 }
 
 async function removeAgentFromTeam(teamId, agentId, agentName) {
-  if (!await showConfirm('Remove Agent', `Remove "${agentName}" from this team?`, 'Remove')) return;
+  if (!await showConfirm(t('teams.confirmRemoveTitle'), t('teams.confirmRemove', { name: agentName }), t('teams.remove'))) return;
   try {
     await api(`/admin/teams/${encodeURIComponent(teamId)}/agents/${encodeURIComponent(agentId)}`, {
       method: 'DELETE',
@@ -388,7 +388,7 @@ async function doCreateMemory(teamId) {
   const content = document.getElementById('newMemoryContent').value;
   const errEl = document.getElementById('addMemoryError');
   if (!title) {
-    errEl.textContent = 'Title is required';
+    errEl.textContent = t('teams.memoryTitleRequired');
     errEl.style.display = 'block';
     return;
   }
@@ -406,7 +406,7 @@ async function doUpdateMemory(teamId, memoryId) {
   const content = document.getElementById('memoryContent-' + memoryId).value;
   const errEl = document.getElementById('memoryEditError-' + memoryId);
   if (!title) {
-    errEl.textContent = 'Title is required';
+    errEl.textContent = t('teams.memoryTitleRequired');
     errEl.style.display = 'block';
     return;
   }
@@ -420,7 +420,7 @@ async function doUpdateMemory(teamId, memoryId) {
 }
 
 async function doDeleteMemory(teamId, memoryId, title) {
-  if (!await showConfirm('Delete Memory', `Delete "${title}"?`, 'Delete')) return;
+  if (!await showConfirm(t('teams.confirmDeleteMemoryTitle'), t('teams.confirmDeleteMemory', { title }), t('common.delete'))) return;
   try {
     await deleteTeamMemory(teamId, memoryId);
     await renderTeamDetail(teamId);
@@ -434,7 +434,7 @@ function copyMemoryUrl(memoryId) {
   navigator.clipboard.writeText(url).then(() => {
     const btn = event.target;
     const orig = btn.textContent;
-    btn.textContent = 'Copied!';
+    btn.textContent = t('teams.copied');
     setTimeout(() => { btn.textContent = orig; }, 1500);
   });
 }

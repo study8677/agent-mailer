@@ -28,7 +28,7 @@ document.getElementById('sidebarModeSelect').addEventListener('change', async (e
   setSidebarSpecialMode('none');
   currentView = null;
   document.getElementById('main').innerHTML =
-    '<div class="empty">Select an agent or thread, or open Inbox/Compose / Stats.</div>';
+    `<div class="empty">${esc(t('empty.selectAgentShort'))}</div>`;
   await refreshSidebar();
 });
 
@@ -37,11 +37,11 @@ document.getElementById('pollSelect').addEventListener('change', (e) => {
   const indicator = document.getElementById('pollIndicator');
   if (pollInterval === 0) {
     indicator.classList.add('paused');
-    indicator.title = 'Auto-refresh paused';
+    indicator.title = t('header.pollPaused');
     stopPolling();
   } else {
     indicator.classList.remove('paused');
-    indicator.title = 'Auto-refresh active';
+    indicator.title = t('header.pollActive');
     startPolling();
   }
 });

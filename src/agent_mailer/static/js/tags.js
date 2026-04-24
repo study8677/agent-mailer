@@ -6,11 +6,11 @@ function refreshTagEditor() {
   if (!agentId) return;
   const entry = statsData.find(a => a.agent_id === agentId);
   const tags = entry ? (entry.tags || []) : [];
-  const pills = tags.map((t, i) =>
-    `<span class="tag-pill">${esc(t)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
+  const pills = tags.map((tag, i) =>
+    `<span class="tag-pill">${esc(tag)}<button class="tag-remove" data-tag-idx="${i}" onclick="event.stopPropagation(); removeTag(${i})">&times;</button></span>`
   ).join('');
   const inputVal = document.getElementById('tagInput')?.value || '';
-  editor.innerHTML = `${pills}<div class="tag-input-wrap"><input class="tag-input" id="tagInput" type="text" placeholder="+ 添加标签" data-agent-id="${esc(agentId)}" autocomplete="off"><div class="tag-autocomplete" id="tagAutocomplete"></div></div>`;
+  editor.innerHTML = `${pills}<div class="tag-input-wrap"><input class="tag-input" id="tagInput" type="text" placeholder="${esc(t('tags.addPlaceholder'))}" data-agent-id="${esc(agentId)}" autocomplete="off"><div class="tag-autocomplete" id="tagAutocomplete"></div></div>`;
   const newInput = document.getElementById('tagInput');
   if (newInput) {
     newInput.value = inputVal;
@@ -42,7 +42,7 @@ async function removeTag(idx) {
 
 function getAllTags() {
   const s = new Set();
-  statsData.forEach(a => (a.tags || []).forEach(t => s.add(t)));
+  statsData.forEach(a => (a.tags || []).forEach(tag => s.add(tag)));
   return [...s].sort();
 }
 
@@ -54,11 +54,11 @@ function updateAutocomplete() {
   const agentId = currentView?.agentId;
   const cur = agentId ? statsData.find(a => a.agent_id === agentId) : null;
   const curTags = cur ? (cur.tags || []) : [];
-  const candidates = getAllTags().filter(t => !curTags.includes(t));
-  const filtered = val ? candidates.filter(t => t.toLowerCase().includes(val)) : candidates;
+  const candidates = getAllTags().filter(tag => !curTags.includes(tag));
+  const filtered = val ? candidates.filter(tag => tag.toLowerCase().includes(val)) : candidates;
   if (filtered.length === 0) { ac.classList.remove('visible'); ac.innerHTML = ''; return; }
-  ac.innerHTML = filtered.map((t, i) =>
-    `<div class="tag-ac-item${i === acIndex ? ' active' : ''}" data-tag="${esc(t)}">${acHighlight(t, val)}</div>`
+  ac.innerHTML = filtered.map((tag, i) =>
+    `<div class="tag-ac-item${i === acIndex ? ' active' : ''}" data-tag="${esc(tag)}">${acHighlight(tag, val)}</div>`
   ).join('');
   ac.classList.add('visible');
 }
@@ -179,11 +179,11 @@ function renderFilterModal() {
   const container = document.getElementById('filterModalTags');
   const allTags = getAllTags();
   if (allTags.length === 0) {
-    container.innerHTML = '<div class="filter-modal-empty">暂无标签</div>';
+    container.innerHTML = `<div class="filter-modal-empty">${esc(t('filter.empty'))}</div>`;
     return;
   }
-  container.innerHTML = allTags.map(t =>
-    `<button class="filter-modal-tag${filterTags.has(t) ? ' selected' : ''}" data-tag="${esc(t)}" onclick="toggleFilterTag(this.dataset.tag)">${esc(t)}</button>`
+  container.innerHTML = allTags.map(tag =>
+    `<button class="filter-modal-tag${filterTags.has(tag) ? ' selected' : ''}" data-tag="${esc(tag)}" onclick="toggleFilterTag(this.dataset.tag)">${esc(tag)}</button>`
   ).join('');
 }
 
@@ -218,7 +218,8 @@ function updateFilterBtn() {
   if (!btn) return;
   const n = filterTags.size;
   btn.className = 'sidebar-filter-btn' + (n > 0 ? ' active' : '');
-  btn.innerHTML = `<span class="filter-icon">&#9881;</span> 标签过滤${n > 0 ? ' (' + n + ')' : ''}`;
+  const label = n > 0 ? t('sidebar.filterCount', { n }) : t('sidebar.filter');
+  btn.innerHTML = `<span class="filter-icon">&#9881;</span> ${esc(label)}`;
 }
 
 function updateFilterVisibility() {

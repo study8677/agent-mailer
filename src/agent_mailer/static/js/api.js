@@ -5,7 +5,7 @@ async function api(path, opts) {
   if (resp.status === 401) {
     clearSessionCookie();
     showLoginPage();
-    throw new Error('Session expired. Please log in again.');
+    throw new Error(t('login.errorSessionExpired'));
   }
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ detail: resp.statusText }));

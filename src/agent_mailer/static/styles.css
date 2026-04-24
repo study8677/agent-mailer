@@ -554,3 +554,38 @@ body { font-family: var(--sans); background: var(--bg); color: var(--text); heig
 .toast-success { background: #16a34a; }
 .toast-error { background: #dc2626; }
 .toast-info { background: #2563eb; }
+
+/* Language switcher (operator console header) */
+.lang-switcher {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-right: 4px;
+}
+.lang-switcher .lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+.lang-switcher .lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+.lang-switcher .lang-btn:hover { color: var(--accent-bright); }
+.lang-switcher .lang-btn.active {
+  background: var(--accent, #7c3aed);
+  color: #fff;
+}
+
+/* Language switcher on the login overlay */
+.login-lang-switcher {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 2001;
+}

@@ -1,0 +1,1023 @@
+// --- i18n (pure JS, no external deps) ---
+(function () {
+  const STORAGE_KEY = 'lang';
+  const SUPPORTED = ['zh-CN', 'en-US'];
+  const FALLBACK = 'en-US';
+
+  const translations = {
+    'zh-CN': {
+      // --- Login / Register ---
+      'login.backHome': '← 返回首页',
+      'login.title': 'Agent Mailer',
+      'login.subtitleSignIn': 'Operator Console — 请登录',
+      'login.subtitleRegister': '创建新账号',
+      'login.username': '用户名',
+      'login.password': '密码',
+      'login.usernamePlaceholder': '请输入用户名',
+      'login.passwordPlaceholder': '请输入密码',
+      'login.signIn': '登录',
+      'login.signingIn': '登录中...',
+      'login.haveInvite': '有邀请码？',
+      'login.register': '注册',
+      'login.regUsernamePlaceholder': '选择一个用户名',
+      'login.regPasswordPlaceholder': '设置密码',
+      'login.inviteCode': '邀请码',
+      'login.inviteCodePlaceholder': '输入邀请码',
+      'login.createAccount': '创建账号',
+      'login.creatingAccount': '创建账号中...',
+      'login.alreadyHave': '已经有账号？',
+      'login.signInLink': '登录',
+      'login.errorMissingCredentials': '请输入用户名和密码。',
+      'login.errorMissingFields': '请填写所有字段。',
+      'login.errorLoginFailed': '登录失败',
+      'login.errorRegisterFailed': '注册失败',
+      'login.accountCreated': '账号已创建！请登录。',
+      'login.errorSessionExpired': '会话已过期，请重新登录。',
+
+      // --- Header ---
+      'header.toggleSidebar': '切换侧边栏',
+      'header.refresh': '刷新：',
+      'header.pollOff': '关闭',
+      'header.pollActive': '自动刷新开启',
+      'header.pollPaused': '自动刷新已暂停',
+      'header.themeToggle': '切换主题',
+      'header.themeToDark': '切换到深色主题',
+      'header.themeToLight': '切换到浅色主题',
+      'header.logout': '退出',
+      'header.exitImpersonation': '退出模拟',
+      'header.impersonating': '正在以 {name} 身份操作',
+      'header.language': '语言',
+      'header.langZh': '中文',
+      'header.langEn': 'EN',
+
+      // --- Sidebar ---
+      'sidebar.label': '侧边栏',
+      'sidebar.archive': '归档',
+      'sidebar.trash': '回收站',
+      'sidebar.byAgents': '按 Agent',
+      'sidebar.byTeams': '按 Team',
+      'sidebar.listMode': '按 Agent 或线程列出',
+      'sidebar.filter': '标签过滤',
+      'sidebar.filterCount': '标签过滤 ({n})',
+      'sidebar.emptyAgents': '暂无 Agent。',
+      'sidebar.emptyFilter': '没有匹配的 Agent',
+      'sidebar.emptyTrash': '回收站为空。',
+      'sidebar.emptyArchive': '暂无已归档线程。',
+      'sidebar.emptyThreads': '暂无线程。',
+      'sidebar.emptyNoThreadsTrash': '回收站中暂无线程。',
+      'sidebar.emptyNoMessagesTrash': '回收站中暂无单封消息。',
+      'sidebar.threadsDeleted': '已删除线程',
+      'sidebar.messagesDeleted': '已删除消息',
+      'sidebar.unassigned': '未分组',
+      'sidebar.noAgentsInTeam': '暂无成员',
+      'sidebar.msgCountSuffix': '条',
+      'sidebar.noSubject': '(无主题)',
+      'sidebar.statusOnline': '在线',
+      'sidebar.statusIdle': '空闲',
+      'sidebar.statusOffline': '离线',
+      'sidebar.deleteAgent': '删除 Agent',
+
+      // --- Filter modal ---
+      'filter.title': '标签过滤',
+      'filter.empty': '暂无标签',
+      'filter.clearAll': '清除全部',
+      'filter.ok': '确定',
+
+      // --- Navigation ---
+      'nav.togglePanel': '收起/展开面板',
+      'nav.search': '搜索',
+      'nav.compose': '写邮件',
+      'nav.stats': '统计',
+      'nav.teams': 'Teams',
+      'nav.threads': '线程',
+      'nav.archive': '归档',
+      'nav.trash': '回收站',
+      'nav.apiKeys': 'API Keys',
+      'nav.admin': '管理',
+      'nav.inbox': '收件箱',
+
+      // --- Common ---
+      'common.cancel': '取消',
+      'common.confirm': '确认',
+      'common.ok': '确定',
+      'common.delete': '删除',
+      'common.loading': '加载中...',
+      'common.save': '保存',
+      'common.edit': '编辑',
+      'common.remove': '移除',
+      'common.create': '创建',
+      'common.back': '← 返回',
+      'common.error': '错误',
+      'common.errorPrefix': '错误：',
+      'common.failed': '失败',
+      'common.failedPrefix': '失败：',
+      'common.noSubject': '(无主题)',
+      'common.prev': '« 上一页',
+      'common.next': '下一页 »',
+      'common.pageInfo': '第 {page} 页 / 共 {total} 页（{count} 条）',
+      'common.pageInfoResults': '第 {page} 页 / 共 {total} 页（{count} 条结果）',
+      'common.pageInfoMessages': '第 {page} 页 / 共 {total} 页（{count} 条消息）',
+
+      // --- Main empty states ---
+      'empty.selectAgent': '请选择一个 Agent 查看收件箱，或点击 收件箱/写邮件/统计。',
+      'empty.selectAgentShort': '请选择一个 Agent 或线程，或打开 收件箱/写邮件/统计。',
+      'empty.selectArchiveThread': '请从侧边栏选择一个已归档线程。',
+      'empty.selectTrashItem': '请从侧边栏选择一个已删除的线程或消息。',
+      'empty.selectThread': '请从侧边栏选择一个线程，或切换到 "按 Agent"。',
+      'empty.agentDeleted': 'Agent 已删除。',
+
+      // --- Search ---
+      'search.title': '搜索',
+      'search.keyword': '关键词',
+      'search.placeholder': '按主题或正文搜索邮件...',
+      'search.button': '搜索',
+      'search.searching': '搜索中...',
+      'search.noResults': '未找到结果。',
+      'search.colSubject': '主题',
+      'search.colSnippet': '片段',
+      'search.colFrom': '发件人',
+      'search.colDate': '日期',
+
+      // --- Threads ---
+      'threads.title': '线程',
+      'threads.loading': '加载中...',
+      'threads.loadFailed': '加载失败：{msg}',
+      'threads.empty': '暂无线程。',
+      'threads.colSubject': '主题',
+      'threads.colMessages': '消息数',
+      'threads.colUnread': '未读',
+      'threads.colLastActivity': '最后活动',
+      'threads.colTrashedAt': '删除时间',
+      'threads.colFrom': '发件人',
+
+      // --- Thread detail ---
+      'thread.title': '线程',
+      'thread.reply': '回复',
+      'thread.forward': '转发',
+      'thread.archive': '归档',
+      'thread.unarchive': '取消归档',
+      'thread.unarchiveBtn': '取消归档',
+      'thread.restore': '恢复',
+      'thread.permanentDelete': '永久删除',
+      'thread.archiveBtn': '归档此线程',
+      'thread.moveToTrash': '移到回收站',
+      'thread.confirmArchive': '确定要归档此线程吗？',
+      'thread.confirmUnarchive': '确定要从归档中恢复此线程吗？',
+      'thread.confirmRestore': '确定要从回收站恢复此线程吗？',
+      'thread.confirmPurge': '确定要永久删除此线程吗？此操作不可撤销。',
+      'thread.confirmPurgeTitle': '永久删除',
+      'thread.confirmPurgeThreadTitle': '永久删除线程',
+      'thread.confirmPurgeThreadBody': '确定要永久删除此线程及其所有消息吗？此操作不可撤销。',
+      'thread.confirmTrash': '确定要将此线程移到回收站吗？',
+      'thread.confirmArchiveTitle': '归档线程',
+      'thread.confirmUnarchiveTitle': '取消归档线程',
+      'thread.confirmRestoreTitle': '恢复线程',
+      'thread.confirmDeleteTitle': '删除线程',
+      'thread.deleteForever': '永久删除',
+      'thread.backInbox': '← 返回收件箱',
+      'thread.backTrash': '← 返回回收站',
+      'thread.backArchive': '← 返回归档',
+      'thread.backThreads': '← 返回线程列表',
+
+      // --- Archive ---
+      'archive.title': '归档',
+      'archive.loading': '加载中...',
+      'archive.empty': '暂无已归档线程。已归档线程会显示在这里。',
+      'archive.loadFailed': '加载失败：{msg}',
+
+      // --- Trash ---
+      'trash.title': '回收站',
+      'trash.loading': '加载中...',
+      'trash.empty': '回收站为空。已删除的线程和消息会显示在这里。',
+      'trash.loadFailed': '加载失败：{msg}',
+      'trash.trashedThreads': '已删除线程',
+      'trash.trashedMessages': '已删除消息',
+      'trash.noThreads': '回收站中暂无线程。',
+      'trash.noMessages': '回收站中暂无单封消息。',
+      'trash.emptyBtn': '清空回收站',
+      'trash.confirmEmpty': '确定要永久删除回收站中所有项目吗？此操作不可撤销。',
+      'trash.confirmEmptyTitle': '清空回收站',
+      'trash.messageInTrash': '回收站中的消息',
+      'trash.trashedAt': '删除时间：{time}',
+      'trash.gone': '此消息已不在回收站中。',
+      'trash.restoreBtn': '恢复',
+      'trash.purgeBtn': '永久删除',
+      'trash.confirmPurgeMsgTitle': '永久删除消息',
+      'trash.confirmPurgeMsgBody': '确定要永久删除这条消息吗？此操作不可撤销。',
+
+      // --- Inbox ---
+      'inbox.title': '收件箱：{address}',
+      'inbox.empty': '暂无消息。',
+      'inbox.copyMd': '复制为 Markdown',
+      'inbox.copyMdTitle': '以 Markdown 格式复制本条邮件',
+      'inbox.saveToTeam': '保存到 Team',
+      'inbox.saveToTeamTitle': '保存邮件到所属 Team 的共享知识库',
+      'inbox.viewFullThread': '查看完整线程',
+      'inbox.replyLink': '回复',
+      'inbox.forwardLink': '转发',
+      'inbox.markUnread': '标为未读',
+      'inbox.moveMsgToTrash': '将此消息移至回收站',
+      'inbox.confirmTrashMsgTitle': '移至回收站',
+      'inbox.confirmTrashMsgBody': '确定要将此消息移至回收站吗？',
+      'inbox.confirmTrashMsgBtn': '移至回收站',
+
+      // --- Message detail labels ---
+      'msg.from': '发件人：',
+      'msg.to': '收件人：',
+      'msg.fromTo': '发件人：{from} → 收件人：{to}',
+      'msg.actionThread': '动作：{action} | 线程：{thread}...',
+      'msg.replyTo': '回复自：{parent}...',
+
+      // --- Compose ---
+      'compose.titleCompose': '写邮件',
+      'compose.titleReply': '回复',
+      'compose.titleForward': '转发',
+      'compose.labelTo': '收件人',
+      'compose.labelSubject': '主题',
+      'compose.labelBody': '正文',
+      'compose.labelAtHint': '— 输入 @ 以插入图片或记忆引用',
+      'compose.toPlaceholder': '输入 Agent 名称或地址...',
+      'compose.subjectPlaceholder': '主题...',
+      'compose.bodyPlaceholderCompose': '输入你的消息...',
+      'compose.bodyPlaceholderForward': '可选备注（出现在转发内容上方）...',
+      'compose.attachments': '附件',
+      'compose.uploadHint': '将图片拖到此处，粘贴 (Ctrl+V)，或',
+      'compose.uploadBrowse': '浏览',
+      'compose.uploading': '上传中...',
+      'compose.uploadFailed': '上传失败',
+      'compose.uploadError': '上传失败：',
+      'compose.forwardContent': '转发内容',
+      'compose.forwardHint': '显示在你的备注之下。选择要转给新收件人的范围。',
+      'compose.forwardMessageOnly': '仅本条消息',
+      'compose.forwardFullThread': '整个线程（按时间顺序）',
+      'compose.reference': '引用（原邮件）',
+      'compose.noMatchAgents': '没有匹配的 Agent',
+      'compose.send': '发送',
+      'compose.sent': '消息已发送！',
+      'compose.errorAddressInvalid': '错误：地址 "{addr}" 不存在，请选择有效的 Agent。',
+      'compose.errorPrefix': '错误：',
+      'compose.clickPreview': '点击预览',
+
+      // --- Stats ---
+      'stats.title': 'Agent 统计',
+      'stats.empty': '暂无已注册的 Agent。',
+      'stats.colName': '名称',
+      'stats.colStatus': '状态',
+      'stats.colAddress': '地址',
+      'stats.colRole': '角色',
+      'stats.colReceived': '收到',
+      'stats.colRead': '已读',
+      'stats.colUnread': '未读',
+      'stats.colSent': '已发',
+      'stats.colReplied': '已回复',
+      'stats.colForwarded': '已转发',
+
+      // --- API Keys ---
+      'apikeys.title': 'API Keys',
+      'apikeys.loadFailed': '加载 API Keys 失败：{msg}',
+      'apikeys.warnOnce': '⚠ 此密钥只会显示一次，请立即复制！',
+      'apikeys.copy': '复制',
+      'apikeys.copied': '已复制！',
+      'apikeys.noKeys': '暂无 API Keys。',
+      'apikeys.colName': '名称',
+      'apikeys.colKey': '密钥',
+      'apikeys.colCreated': '创建时间',
+      'apikeys.colLastUsed': '最后使用',
+      'apikeys.colStatus': '状态',
+      'apikeys.colAction': '操作',
+      'apikeys.active': '启用',
+      'apikeys.inactive': '禁用',
+      'apikeys.deactivate': '禁用',
+      'apikeys.reactivate': '重新启用',
+      'apikeys.delete': '删除',
+      'apikeys.createSection': '创建新密钥',
+      'apikeys.newKeyPlaceholder': '密钥名称（如：my-agent）',
+      'apikeys.create': '创建',
+      'apikeys.yourKeys': '你的密钥',
+      'apikeys.enterName': '请输入密钥名称。',
+      'apikeys.confirmDeactivate': '禁用密钥 "{name}"？密钥将立即停止工作。',
+      'apikeys.confirmDeactivateTitle': '禁用 API Key',
+      'apikeys.confirmDeleteTitle': '删除 API Key',
+      'apikeys.confirmDelete': '永久删除密钥 "{name}"？此操作不可撤销。',
+      'apikeys.changePassword': '修改密码',
+      'apikeys.currentPassword': '当前密码',
+      'apikeys.newPassword': '新密码',
+      'apikeys.confirmPassword': '确认新密码',
+      'apikeys.currentPasswordPlaceholder': '输入当前密码',
+      'apikeys.newPasswordPlaceholder': '输入新密码（至少 8 位）',
+      'apikeys.confirmPasswordPlaceholder': '再次输入新密码',
+      'apikeys.updatePassword': '更新密码',
+      'apikeys.fillAllFields': '请填写所有字段。',
+      'apikeys.passwordMismatch': '两次输入的新密码不一致。',
+      'apikeys.passwordTooShort': '新密码长度至少为 8 位。',
+      'apikeys.passwordChanged': '密码修改成功。',
+
+      // --- Admin ---
+      'admin.title': '管理面板',
+      'admin.users': '用户',
+      'admin.inviteCodes': '邀请码',
+      'admin.loadFailed': '加载管理数据失败：{msg}',
+      'admin.noUsers': '暂无用户。',
+      'admin.noCodes': '暂无邀请码。',
+      'admin.colUsername': '用户名',
+      'admin.colRole': '角色',
+      'admin.colCreated': '创建时间',
+      'admin.colAction': '操作',
+      'admin.colCode': '邀请码',
+      'admin.colUsedBy': '被谁使用',
+      'admin.loginAs': '模拟登录',
+      'admin.confirmLoginAsTitle': '模拟该用户',
+      'admin.confirmLoginAs': '切换到以 "{name}" 的身份操作？',
+      'admin.roleSuperadmin': '超级管理员',
+      'admin.roleUser': '普通用户',
+      'admin.generateCode': '生成邀请码',
+      'admin.generated': '已生成：{code}',
+
+      // --- Teams ---
+      'teams.title': 'Teams',
+      'teams.empty': '暂无 Team。',
+      'teams.emptyHint': '创建一个 Team，把 Agent 分组，实现联系可见性隔离。',
+      'teams.createFirst': '+ 创建你的第一个 Team',
+      'teams.create': '+ 创建 Team',
+      'teams.createTitle': '创建 Team',
+      'teams.backList': '← 返回 Teams',
+      'teams.name': 'Team 名称',
+      'teams.description': '描述',
+      'teams.namePlaceholder': '例如：前端、后端、运维...',
+      'teams.descPlaceholder': '对 Team 的简短描述（可选）',
+      'teams.createBtn': '创建 Team',
+      'teams.nameRequired': 'Team 名称为必填项',
+      'teams.noDescription': '暂无描述',
+      'teams.agents': 'agents',
+      'teams.members': '团队成员',
+      'teams.membersCount': '团队成员 ({n})',
+      'teams.membersEmpty': '暂无成员，请在下方添加 Agent',
+      'teams.colName': '名称',
+      'teams.colRole': '角色',
+      'teams.colAddress': '地址',
+      'teams.colStatus': '状态',
+      'teams.colAction': '操作',
+      'teams.addMember': '添加成员',
+      'teams.addMemberHint': '选择一个未分组的 Agent 加入当前 Team。每个 Agent 只能属于一个 Team。',
+      'teams.addMemberLabel': 'Agent',
+      'teams.addMemberSelect': '-- 选择要添加的 Agent --',
+      'teams.addMemberBtn': '加入 Team',
+      'teams.allAssigned': '所有 Agent 均已分组。请先创建新 Agent 或从其它 Team 移除 Agent。',
+      'teams.remove': '移除',
+      'teams.confirmRemoveTitle': '移除 Agent',
+      'teams.confirmRemove': '从此 Team 中移除 "{name}"？',
+      'teams.sharedMemories': '共享记忆',
+      'teams.sharedMemoriesCount': '共享记忆 ({n})',
+      'teams.noMemories': '暂无共享记忆。',
+      'teams.addMemory': '+ 添加记忆',
+      'teams.memoryTitle': '标题',
+      'teams.memoryTitlePlaceholder': '记忆标题...',
+      'teams.memoryContent': '内容',
+      'teams.memoryContentPlaceholder': 'Markdown 内容...',
+      'teams.copyUrl': '复制链接',
+      'teams.copied': '已复制！',
+      'teams.memoryTitleRequired': '标题为必填项',
+      'teams.confirmDeleteMemoryTitle': '删除记忆',
+      'teams.confirmDeleteMemory': '删除 "{title}"？',
+      'teams.editTitle': '编辑 Team',
+      'teams.saveChanges': '保存修改',
+      'teams.delete': '删除',
+      'teams.confirmDeleteTitle': '删除 Team',
+      'teams.confirmDelete': '删除 Team "{name}"？其 Agent 将被取消分组。',
+      'teams.notFound': '未找到该 Team。',
+
+      // --- Tag editor ---
+      'tags.addPlaceholder': '+ 添加标签',
+
+      // --- Toast / misc ---
+      'toast.msgNotFound': '未找到邮件内容',
+      'toast.copied': '已复制到剪贴板',
+      'toast.copyFailed': '复制失败，请手动复制：',
+      'toast.autoCopyFailed': '自动复制失败，已打开手动复制窗口',
+      'toast.noTeam': '当前邮箱未加入任何 Team，无法保存到知识库',
+      'toast.savedToTeam': '已保存到 Team 知识库',
+      'toast.saveFailed': '保存失败',
+      'toast.saveFailedPrefix': '保存失败：',
+
+      // --- Delete agent ---
+      'agent.deleteTitle': '删除 Agent',
+      'agent.deleteConfirm': '确定要删除 Agent "{name}" 吗？此操作不可撤销。',
+      'agent.deleteFailed': '删除失败：{msg}',
+
+      // --- Render failure ---
+      'render.mdFailed': '(邮件正文渲染失败)',
+
+      // --- Splash page ---
+      'splash.logoLabel': 'AMP/PROTOCOL',
+      'splash.brokerOnline': 'BROKER ONLINE',
+      'splash.heroLabel': 'Agent Mailer Protocol',
+      'splash.heroTitle1': '面向 AI Agent 协作的',
+      'splash.heroTitle2': '异步通信',
+      'splash.heroTitle3': '协议标准。',
+      'splash.heroSubtitle': '轻量级消息代理，让 AI Agent 通过共享的异步邮件协议进行通信、协作与协调。',
+      'splash.quickStart': '快速开始',
+      'splash.quickStartReadPrefix': '读取',
+      'splash.quickStartSuffix': '以便将你的 Agent 注册到 broker',
+      'splash.quickStartHint': '// 把这段指令贴给任意 AI Agent，即可启动接入流程',
+      'splash.copy': '复制',
+      'splash.copied': '已复制',
+      'splash.ctaAgentTitle': '我是 Agent',
+      'splash.ctaAgentDesc': '查看协议规范、API 端点以及面向 AI Agent 的接入指南。',
+      'splash.ctaAgentArrow': '查看文档 →',
+      'splash.ctaHumanTitle': '我是人类',
+      'splash.ctaHumanDesc': '打开 Operator Console 管理 Agent、查看邮件并创建 API Key。',
+      'splash.ctaHumanArrow': '打开控制台 →',
+      'splash.guideTitle': 'AGENT 接入指南',
+      'splash.close': '关闭',
+      'splash.step01': 'STEP 01',
+      'splash.step01Title': '获取 API Key',
+      'splash.step01Desc': '请人类操作员在 Operator Console 中创建 API Key。所有请求都需要携带 X-API-Key 头。',
+      'splash.step02': 'STEP 02',
+      'splash.step02Title': '注册身份',
+      'splash.step02Desc': '向 broker 注册以获取你的专属地址和 Agent ID。',
+      'splash.step03': 'STEP 03',
+      'splash.step03Title': '下载身份文件',
+      'splash.step03Desc': '获取 AGENT.md 与适配文件，保存到你的工作目录。',
+      'splash.step04': 'STEP 04',
+      'splash.step04Title': '开始通信',
+      'splash.step04Desc': '检查收件箱、发送消息、回复任务，并与其它 Agent 协作。',
+      'splash.reference': '参考',
+      'splash.referenceTitle': '完整接入指南',
+      'splash.referenceDesc': '查看完整的接入协议，包含所有字段与选项：',
+      'splash.footerVersion': 'Agent Mailer Protocol v0.1.0',
+      'splash.github': 'GitHub',
+      'splash.apiDocs': 'API 文档',
+      'splash.setupGuide': '接入指南',
+      'splash.console': '控制台',
+    },
+    'en-US': {
+      // --- Login / Register ---
+      'login.backHome': '← Back to Home',
+      'login.title': 'Agent Mailer',
+      'login.subtitleSignIn': 'Operator Console — Sign in to continue',
+      'login.subtitleRegister': 'Create a new account',
+      'login.username': 'Username',
+      'login.password': 'Password',
+      'login.usernamePlaceholder': 'Enter username',
+      'login.passwordPlaceholder': 'Enter password',
+      'login.signIn': 'Sign In',
+      'login.signingIn': 'Signing in...',
+      'login.haveInvite': 'Have an invite code?',
+      'login.register': 'Register',
+      'login.regUsernamePlaceholder': 'Choose a username',
+      'login.regPasswordPlaceholder': 'Choose a password',
+      'login.inviteCode': 'Invite Code',
+      'login.inviteCodePlaceholder': 'Enter invite code',
+      'login.createAccount': 'Create Account',
+      'login.creatingAccount': 'Creating account...',
+      'login.alreadyHave': 'Already have an account?',
+      'login.signInLink': 'Sign in',
+      'login.errorMissingCredentials': 'Please enter username and password.',
+      'login.errorMissingFields': 'Please fill in all fields.',
+      'login.errorLoginFailed': 'Login failed',
+      'login.errorRegisterFailed': 'Registration failed',
+      'login.accountCreated': 'Account created! Please sign in.',
+      'login.errorSessionExpired': 'Session expired. Please log in again.',
+
+      // --- Header ---
+      'header.toggleSidebar': 'Toggle sidebar',
+      'header.refresh': 'Refresh:',
+      'header.pollOff': 'Off',
+      'header.pollActive': 'Auto-refresh active',
+      'header.pollPaused': 'Auto-refresh paused',
+      'header.themeToggle': 'Toggle theme',
+      'header.themeToDark': 'Switch to dark theme',
+      'header.themeToLight': 'Switch to light theme',
+      'header.logout': 'Logout',
+      'header.exitImpersonation': 'Exit impersonation',
+      'header.impersonating': 'Acting as {name}',
+      'header.language': 'Language',
+      'header.langZh': '中文',
+      'header.langEn': 'EN',
+
+      // --- Sidebar ---
+      'sidebar.label': 'Sidebar',
+      'sidebar.archive': 'Archive',
+      'sidebar.trash': 'Trash',
+      'sidebar.byAgents': 'By Agents',
+      'sidebar.byTeams': 'By Teams',
+      'sidebar.listMode': 'List by agents or threads',
+      'sidebar.filter': 'Tag filter',
+      'sidebar.filterCount': 'Tag filter ({n})',
+      'sidebar.emptyAgents': 'No agents yet.',
+      'sidebar.emptyFilter': 'No matching agents',
+      'sidebar.emptyTrash': 'Trash is empty.',
+      'sidebar.emptyArchive': 'No archived threads.',
+      'sidebar.emptyThreads': 'No threads yet.',
+      'sidebar.emptyNoThreadsTrash': 'No threads in trash.',
+      'sidebar.emptyNoMessagesTrash': 'No individual messages in trash.',
+      'sidebar.threadsDeleted': 'Threads deleted',
+      'sidebar.messagesDeleted': 'Messages deleted',
+      'sidebar.unassigned': 'Unassigned',
+      'sidebar.noAgentsInTeam': 'No agents',
+      'sidebar.msgCountSuffix': 'msg',
+      'sidebar.noSubject': '(no subject)',
+      'sidebar.statusOnline': 'Online',
+      'sidebar.statusIdle': 'Idle',
+      'sidebar.statusOffline': 'Offline',
+      'sidebar.deleteAgent': 'Delete agent',
+
+      // --- Filter modal ---
+      'filter.title': 'Tag filter',
+      'filter.empty': 'No tags yet',
+      'filter.clearAll': 'Clear all',
+      'filter.ok': 'OK',
+
+      // --- Navigation ---
+      'nav.togglePanel': 'Toggle panel',
+      'nav.search': 'Search',
+      'nav.compose': 'Compose',
+      'nav.stats': 'Stats',
+      'nav.teams': 'Teams',
+      'nav.threads': 'Threads',
+      'nav.archive': 'Archive',
+      'nav.trash': 'Trash',
+      'nav.apiKeys': 'API Keys',
+      'nav.admin': 'Admin',
+      'nav.inbox': 'Inbox',
+
+      // --- Common ---
+      'common.cancel': 'Cancel',
+      'common.confirm': 'Confirm',
+      'common.ok': 'OK',
+      'common.delete': 'Delete',
+      'common.loading': 'Loading...',
+      'common.save': 'Save',
+      'common.edit': 'Edit',
+      'common.remove': 'Remove',
+      'common.create': 'Create',
+      'common.back': '← Back',
+      'common.error': 'Error',
+      'common.errorPrefix': 'Error: ',
+      'common.failed': 'Failed',
+      'common.failedPrefix': 'Failed: ',
+      'common.noSubject': '(no subject)',
+      'common.prev': '« Prev',
+      'common.next': 'Next »',
+      'common.pageInfo': 'Page {page} / {total} ({count} total)',
+      'common.pageInfoResults': 'Page {page} / {total} ({count} results)',
+      'common.pageInfoMessages': 'Page {page} / {total} ({count} messages)',
+
+      // --- Main empty states ---
+      'empty.selectAgent': 'Select an agent to view inbox, or click Inbox/Compose / Stats.',
+      'empty.selectAgentShort': 'Select an agent or thread, or open Inbox/Compose / Stats.',
+      'empty.selectArchiveThread': 'Select an archived thread from the sidebar.',
+      'empty.selectTrashItem': 'Select a deleted thread or message from the sidebar.',
+      'empty.selectThread': 'Select a thread from the sidebar, or switch to By Agents.',
+      'empty.agentDeleted': 'Agent has been deleted.',
+
+      // --- Search ---
+      'search.title': 'Search',
+      'search.keyword': 'Keyword',
+      'search.placeholder': 'Search messages by subject or body...',
+      'search.button': 'Search',
+      'search.searching': 'Searching...',
+      'search.noResults': 'No results found.',
+      'search.colSubject': 'Subject',
+      'search.colSnippet': 'Snippet',
+      'search.colFrom': 'From',
+      'search.colDate': 'Date',
+
+      // --- Threads ---
+      'threads.title': 'Threads',
+      'threads.loading': 'Loading...',
+      'threads.loadFailed': 'Failed to load: {msg}',
+      'threads.empty': 'No threads yet.',
+      'threads.colSubject': 'Subject',
+      'threads.colMessages': 'Messages',
+      'threads.colUnread': 'Unread',
+      'threads.colLastActivity': 'Last Activity',
+      'threads.colTrashedAt': 'Trashed At',
+      'threads.colFrom': 'From',
+
+      // --- Thread detail ---
+      'thread.title': 'Thread',
+      'thread.reply': 'Reply',
+      'thread.forward': 'Forward',
+      'thread.archive': 'Archive',
+      'thread.unarchive': 'UnArchive',
+      'thread.unarchiveBtn': 'Unarchive',
+      'thread.restore': 'Restore',
+      'thread.permanentDelete': 'Delete permanently',
+      'thread.archiveBtn': 'Archive thread',
+      'thread.moveToTrash': 'Move to trash',
+      'thread.confirmArchive': 'Archive this thread?',
+      'thread.confirmUnarchive': 'Restore this thread from archive?',
+      'thread.confirmRestore': 'Restore this thread from trash?',
+      'thread.confirmPurge': 'Permanently delete this thread? This cannot be undone.',
+      'thread.confirmPurgeTitle': 'Permanent Delete',
+      'thread.confirmPurgeThreadTitle': 'Delete thread permanently',
+      'thread.confirmPurgeThreadBody': 'Permanently delete this thread and all its messages? This cannot be undone.',
+      'thread.confirmTrash': 'Move this thread to trash?',
+      'thread.confirmArchiveTitle': 'Archive Thread',
+      'thread.confirmUnarchiveTitle': 'UnArchive Thread',
+      'thread.confirmRestoreTitle': 'Restore Thread',
+      'thread.confirmDeleteTitle': 'Delete Thread',
+      'thread.deleteForever': 'Delete Forever',
+      'thread.backInbox': '← Back to inbox',
+      'thread.backTrash': '← Back to Trash',
+      'thread.backArchive': '← Back to Archive',
+      'thread.backThreads': '← Back to thread list',
+
+      // --- Archive ---
+      'archive.title': 'Archive',
+      'archive.loading': 'Loading...',
+      'archive.empty': 'No archived threads. Archived threads will appear here.',
+      'archive.loadFailed': 'Failed to load: {msg}',
+
+      // --- Trash ---
+      'trash.title': 'Trash',
+      'trash.loading': 'Loading...',
+      'trash.empty': 'Trash is empty. Deleted threads and messages will appear here.',
+      'trash.loadFailed': 'Failed to load trash data: {msg}',
+      'trash.trashedThreads': 'Trashed Threads',
+      'trash.trashedMessages': 'Trashed Messages',
+      'trash.noThreads': 'No threads in trash.',
+      'trash.noMessages': 'No individual messages in trash.',
+      'trash.emptyBtn': 'Empty Trash',
+      'trash.confirmEmpty': 'Permanently delete ALL items in trash? This cannot be undone.',
+      'trash.confirmEmptyTitle': 'Empty Trash',
+      'trash.messageInTrash': 'Message in trash',
+      'trash.trashedAt': 'Trashed at: {time}',
+      'trash.gone': 'This message is no longer in trash.',
+      'trash.restoreBtn': 'Restore',
+      'trash.purgeBtn': 'Delete permanently',
+      'trash.confirmPurgeMsgTitle': 'Delete message permanently',
+      'trash.confirmPurgeMsgBody': 'Permanently delete this message? This cannot be undone.',
+
+      // --- Inbox ---
+      'inbox.title': 'Inbox: {address}',
+      'inbox.empty': 'No messages.',
+      'inbox.copyMd': 'Copy as Markdown',
+      'inbox.copyMdTitle': 'Copy this message as Markdown',
+      'inbox.saveToTeam': 'Save to Team',
+      'inbox.saveToTeamTitle': 'Save this message to the owning Team\'s shared knowledge base',
+      'inbox.viewFullThread': 'View full thread',
+      'inbox.replyLink': 'Reply',
+      'inbox.forwardLink': 'Forward',
+      'inbox.markUnread': 'Mark as unread',
+      'inbox.moveMsgToTrash': 'Move message to trash',
+      'inbox.confirmTrashMsgTitle': 'Move to Trash',
+      'inbox.confirmTrashMsgBody': 'Move this message to trash?',
+      'inbox.confirmTrashMsgBtn': 'Move to Trash',
+
+      // --- Message detail labels ---
+      'msg.from': 'From: ',
+      'msg.to': 'To: ',
+      'msg.fromTo': 'From: {from} → To: {to}',
+      'msg.actionThread': 'Action: {action} | Thread: {thread}...',
+      'msg.replyTo': 'Reply to: {parent}...',
+
+      // --- Compose ---
+      'compose.titleCompose': 'Compose Message',
+      'compose.titleReply': 'Reply',
+      'compose.titleForward': 'Forward',
+      'compose.labelTo': 'To',
+      'compose.labelSubject': 'Subject',
+      'compose.labelBody': 'Body',
+      'compose.labelAtHint': '— type @ to insert image or memory reference',
+      'compose.toPlaceholder': 'Type agent name or address...',
+      'compose.subjectPlaceholder': 'Subject...',
+      'compose.bodyPlaceholderCompose': 'Write your message...',
+      'compose.bodyPlaceholderForward': 'Optional note (appears above forwarded content)...',
+      'compose.attachments': 'Attachments',
+      'compose.uploadHint': 'Drop images here, paste (Ctrl+V), or',
+      'compose.uploadBrowse': 'browse',
+      'compose.uploading': 'Uploading...',
+      'compose.uploadFailed': 'Upload failed',
+      'compose.uploadError': 'Upload error: ',
+      'compose.forwardContent': 'Forwarded content',
+      'compose.forwardHint': 'Shown after your note. Pick scope for the new recipient.',
+      'compose.forwardMessageOnly': 'This message only',
+      'compose.forwardFullThread': 'Full thread (chronological)',
+      'compose.reference': 'Reference (source message)',
+      'compose.noMatchAgents': 'No matching agents',
+      'compose.send': 'Send',
+      'compose.sent': 'Message sent!',
+      'compose.errorAddressInvalid': 'Error: Address "{addr}" does not exist. Please select a valid agent.',
+      'compose.errorPrefix': 'Error: ',
+      'compose.clickPreview': 'Click to preview',
+
+      // --- Stats ---
+      'stats.title': 'Agent Statistics',
+      'stats.empty': 'No agents registered.',
+      'stats.colName': 'Name',
+      'stats.colStatus': 'Status',
+      'stats.colAddress': 'Address',
+      'stats.colRole': 'Role',
+      'stats.colReceived': 'Received',
+      'stats.colRead': 'Read',
+      'stats.colUnread': 'Unread',
+      'stats.colSent': 'Sent',
+      'stats.colReplied': 'Replied',
+      'stats.colForwarded': 'Forwarded',
+
+      // --- API Keys ---
+      'apikeys.title': 'API Keys',
+      'apikeys.loadFailed': 'Failed to load API keys: {msg}',
+      'apikeys.warnOnce': '⚠ This key will only be shown once. Copy it now!',
+      'apikeys.copy': 'Copy',
+      'apikeys.copied': 'Copied!',
+      'apikeys.noKeys': 'No API keys yet.',
+      'apikeys.colName': 'Name',
+      'apikeys.colKey': 'Key',
+      'apikeys.colCreated': 'Created',
+      'apikeys.colLastUsed': 'Last Used',
+      'apikeys.colStatus': 'Status',
+      'apikeys.colAction': 'Action',
+      'apikeys.active': 'Active',
+      'apikeys.inactive': 'Inactive',
+      'apikeys.deactivate': 'Deactivate',
+      'apikeys.reactivate': 'Reactivate',
+      'apikeys.delete': 'Delete',
+      'apikeys.createSection': 'Create New Key',
+      'apikeys.newKeyPlaceholder': 'Key name (e.g. my-agent)',
+      'apikeys.create': 'Create',
+      'apikeys.yourKeys': 'Your Keys',
+      'apikeys.enterName': 'Please enter a key name.',
+      'apikeys.confirmDeactivate': 'Deactivate key "{name}"? It will stop working immediately.',
+      'apikeys.confirmDeactivateTitle': 'Deactivate API Key',
+      'apikeys.confirmDeleteTitle': 'Delete API Key',
+      'apikeys.confirmDelete': 'Permanently delete key "{name}"? This cannot be undone.',
+      'apikeys.changePassword': 'Change Password',
+      'apikeys.currentPassword': 'Current Password',
+      'apikeys.newPassword': 'New Password',
+      'apikeys.confirmPassword': 'Confirm New Password',
+      'apikeys.currentPasswordPlaceholder': 'Enter current password',
+      'apikeys.newPasswordPlaceholder': 'Enter new password (min 8 chars)',
+      'apikeys.confirmPasswordPlaceholder': 'Confirm new password',
+      'apikeys.updatePassword': 'Update Password',
+      'apikeys.fillAllFields': 'Please fill in all fields.',
+      'apikeys.passwordMismatch': 'New passwords do not match.',
+      'apikeys.passwordTooShort': 'New password must be at least 8 characters.',
+      'apikeys.passwordChanged': 'Password changed successfully.',
+
+      // --- Admin ---
+      'admin.title': 'Admin Panel',
+      'admin.users': 'Users',
+      'admin.inviteCodes': 'Invite Codes',
+      'admin.loadFailed': 'Failed to load admin data: {msg}',
+      'admin.noUsers': 'No users.',
+      'admin.noCodes': 'No invite codes generated.',
+      'admin.colUsername': 'Username',
+      'admin.colRole': 'Role',
+      'admin.colCreated': 'Created',
+      'admin.colAction': 'Action',
+      'admin.colCode': 'Code',
+      'admin.colUsedBy': 'Used By',
+      'admin.loginAs': 'Login As',
+      'admin.confirmLoginAsTitle': 'Login As User',
+      'admin.confirmLoginAs': 'Switch to acting as "{name}"?',
+      'admin.roleSuperadmin': 'Superadmin',
+      'admin.roleUser': 'User',
+      'admin.generateCode': 'Generate Invite Code',
+      'admin.generated': 'Generated: {code}',
+
+      // --- Teams ---
+      'teams.title': 'Teams',
+      'teams.empty': 'No teams yet.',
+      'teams.emptyHint': 'Create a team to organize your agents into groups with isolated contact visibility.',
+      'teams.createFirst': '+ Create Your First Team',
+      'teams.create': '+ Create Team',
+      'teams.createTitle': 'Create Team',
+      'teams.backList': '← Back to Teams',
+      'teams.name': 'Team Name',
+      'teams.description': 'Description',
+      'teams.namePlaceholder': 'e.g. Frontend, Backend, DevOps...',
+      'teams.descPlaceholder': 'Brief description of this team\'s purpose (optional)',
+      'teams.createBtn': 'Create Team',
+      'teams.nameRequired': 'Team name is required',
+      'teams.noDescription': 'No description',
+      'teams.agents': 'agents',
+      'teams.members': 'Members',
+      'teams.membersCount': 'Members ({n})',
+      'teams.membersEmpty': 'No members yet. Add an agent below.',
+      'teams.colName': 'Name',
+      'teams.colRole': 'Role',
+      'teams.colAddress': 'Address',
+      'teams.colStatus': 'Status',
+      'teams.colAction': 'Action',
+      'teams.addMember': 'Add Member',
+      'teams.addMemberHint': 'Select an unassigned agent to add to this team. Each agent can only belong to one team.',
+      'teams.addMemberLabel': 'Agent',
+      'teams.addMemberSelect': '-- Select an agent to add --',
+      'teams.addMemberBtn': 'Add to Team',
+      'teams.allAssigned': 'All agents are already assigned to teams. Create new agents or remove existing ones from other teams first.',
+      'teams.remove': 'Remove',
+      'teams.confirmRemoveTitle': 'Remove Agent',
+      'teams.confirmRemove': 'Remove "{name}" from this team?',
+      'teams.sharedMemories': 'Shared Memories',
+      'teams.sharedMemoriesCount': 'Shared Memories ({n})',
+      'teams.noMemories': 'No shared memories yet.',
+      'teams.addMemory': '+ Add Memory',
+      'teams.memoryTitle': 'Title',
+      'teams.memoryTitlePlaceholder': 'Memory title...',
+      'teams.memoryContent': 'Content',
+      'teams.memoryContentPlaceholder': 'Markdown content...',
+      'teams.copyUrl': 'Copy URL',
+      'teams.copied': 'Copied!',
+      'teams.memoryTitleRequired': 'Title is required',
+      'teams.confirmDeleteMemoryTitle': 'Delete Memory',
+      'teams.confirmDeleteMemory': 'Delete "{title}"?',
+      'teams.editTitle': 'Edit Team',
+      'teams.saveChanges': 'Save Changes',
+      'teams.delete': 'Delete',
+      'teams.confirmDeleteTitle': 'Delete Team',
+      'teams.confirmDelete': 'Delete team "{name}"? Agents will be unassigned.',
+      'teams.notFound': 'Team not found.',
+
+      // --- Tag editor ---
+      'tags.addPlaceholder': '+ Add tag',
+
+      // --- Toast / misc ---
+      'toast.msgNotFound': 'Message content not found',
+      'toast.copied': 'Copied to clipboard',
+      'toast.copyFailed': 'Copy failed, please copy manually:',
+      'toast.autoCopyFailed': 'Auto-copy failed; opened manual copy dialog',
+      'toast.noTeam': 'This mailbox is not assigned to any Team; cannot save to knowledge base',
+      'toast.savedToTeam': 'Saved to Team knowledge base',
+      'toast.saveFailed': 'Save failed',
+      'toast.saveFailedPrefix': 'Save failed: ',
+
+      // --- Delete agent ---
+      'agent.deleteTitle': 'Delete Agent',
+      'agent.deleteConfirm': 'Delete agent "{name}"? This cannot be undone.',
+      'agent.deleteFailed': 'Delete failed: {msg}',
+
+      // --- Render failure ---
+      'render.mdFailed': '(Failed to render message body)',
+
+      // --- Splash page ---
+      'splash.logoLabel': 'AMP/PROTOCOL',
+      'splash.brokerOnline': 'BROKER ONLINE',
+      'splash.heroLabel': 'Agent Mailer Protocol',
+      'splash.heroTitle1': 'The Asynchronous Communication',
+      'splash.heroTitle2': 'Standard for AI Agent',
+      'splash.heroTitle3': 'Collaboration.',
+      'splash.heroSubtitle': 'A lightweight message broker that enables AI agents to communicate, collaborate, and coordinate through a shared asynchronous mail protocol.',
+      'splash.quickStart': 'Quick Start',
+      'splash.quickStartReadPrefix': 'read',
+      'splash.quickStartSuffix': 'to register your agent to the broker',
+      'splash.quickStartHint': '// Paste this instruction into any AI agent to begin onboarding',
+      'splash.copy': 'COPY',
+      'splash.copied': 'COPIED',
+      'splash.ctaAgentTitle': "I'm an Agent",
+      'splash.ctaAgentDesc': 'View the protocol specification, API endpoints, and integration guide for AI agents.',
+      'splash.ctaAgentArrow': 'View docs →',
+      'splash.ctaHumanTitle': "I'm a Human",
+      'splash.ctaHumanDesc': 'Access the Operator Console to manage agents, monitor messages, and create API keys.',
+      'splash.ctaHumanArrow': 'Open console →',
+      'splash.guideTitle': 'AGENT INTEGRATION GUIDE',
+      'splash.close': 'CLOSE',
+      'splash.step01': 'STEP 01',
+      'splash.step01Title': 'Get an API Key',
+      'splash.step01Desc': 'Ask your human operator to create an API Key from the Operator Console. All requests require the X-API-Key header.',
+      'splash.step02': 'STEP 02',
+      'splash.step02Title': 'Register Your Identity',
+      'splash.step02Desc': 'Register with the broker to receive your unique address and agent ID.',
+      'splash.step03': 'STEP 03',
+      'splash.step03Title': 'Download Identity Files',
+      'splash.step03Desc': 'Fetch your AGENT.md and adapter files, then save them to your working directory.',
+      'splash.step04': 'STEP 04',
+      'splash.step04Title': 'Start Communicating',
+      'splash.step04Desc': 'Check your inbox, send messages, reply to tasks, and collaborate with other agents.',
+      'splash.reference': 'REFERENCE',
+      'splash.referenceTitle': 'Full Setup Guide',
+      'splash.referenceDesc': 'For the complete onboarding protocol with all fields and options:',
+      'splash.footerVersion': 'Agent Mailer Protocol v0.1.0',
+      'splash.github': 'GitHub',
+      'splash.apiDocs': 'API Docs',
+      'splash.setupGuide': 'Setup Guide',
+      'splash.console': 'Console',
+    },
+  };
+
+  function detectBrowserLang() {
+    const navLangs = (navigator.languages && navigator.languages.length)
+      ? navigator.languages
+      : [navigator.language || navigator.userLanguage || ''];
+    for (const l of navLangs) {
+      if (l && l.toLowerCase().startsWith('zh')) return 'zh-CN';
+    }
+    return FALLBACK;
+  }
+
+  function getLanguage() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && SUPPORTED.indexOf(saved) !== -1) return saved;
+    } catch (e) { /* ignore */ }
+    return detectBrowserLang();
+  }
+
+  function setLanguage(lang) {
+    if (SUPPORTED.indexOf(lang) === -1) lang = FALLBACK;
+    try { localStorage.setItem(STORAGE_KEY, lang); } catch (e) { /* ignore */ }
+    applyLanguage(lang);
+    updateLangSwitcherUI(lang);
+    // Re-render current view so dynamic JS strings pick up the new language.
+    try {
+      if (typeof currentView !== 'undefined' && currentView) {
+        if (typeof refreshSidebar === 'function') refreshSidebar();
+        if (currentView.type === 'inbox' && typeof renderInbox === 'function') renderInbox();
+        else if (currentView.type === 'stats' && typeof renderStats === 'function') renderStats();
+        else if (currentView.type === 'thread' && typeof renderThreadView === 'function') renderThreadView();
+        else if (currentView.type === 'threads' && typeof renderThreadsMain === 'function') renderThreadsMain();
+        else if (currentView.type === 'archive' && typeof renderArchiveMain === 'function') renderArchiveMain();
+        else if (currentView.type === 'trash' && typeof renderTrashMain === 'function') renderTrashMain();
+        else if (currentView.type === 'search' && typeof renderSearchPage === 'function') renderSearchPage();
+        else if (currentView.type === 'apikeys' && typeof renderApiKeys === 'function') renderApiKeys();
+        else if (currentView.type === 'admin' && typeof renderAdmin === 'function') renderAdmin();
+        else if ((currentView.type === 'teams' || currentView.type === 'teamDetail') && typeof renderTeams === 'function') renderTeams();
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function format(str, vars) {
+    if (!vars) return str;
+    return str.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+  }
+
+  function t(key, vars) {
+    const lang = getLanguage();
+    const dict = translations[lang] || translations[FALLBACK];
+    const fallbackDict = translations[FALLBACK];
+    const val = (dict && dict[key] != null) ? dict[key] : (fallbackDict && fallbackDict[key] != null ? fallbackDict[key] : key);
+    return format(val, vars);
+  }
+
+  function applyLanguage(lang) {
+    document.documentElement.setAttribute('lang', lang);
+    // data-i18n → textContent
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (!key) return;
+      el.textContent = t(key);
+    });
+    // data-i18n-html → innerHTML (only for whitelisted static keys; use sparingly)
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+      const key = el.getAttribute('data-i18n-html');
+      if (!key) return;
+      el.innerHTML = t(key);
+    });
+    // data-i18n-placeholder / title / aria-label
+    ['placeholder', 'title', 'aria-label'].forEach(attr => {
+      const selector = `[data-i18n-${attr}]`;
+      document.querySelectorAll(selector).forEach(el => {
+        const key = el.getAttribute(`data-i18n-${attr}`);
+        if (!key) return;
+        el.setAttribute(attr, t(key));
+      });
+    });
+    // Update <title> if it carries data-i18n-title-doc
+    const titleEl = document.querySelector('title[data-i18n]');
+    if (titleEl) {
+      titleEl.textContent = t(titleEl.getAttribute('data-i18n'));
+    }
+  }
+
+  function updateLangSwitcherUI(lang) {
+    document.querySelectorAll('.lang-switcher [data-lang]').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+    });
+  }
+
+  function initLangSwitcher() {
+    document.querySelectorAll('.lang-switcher [data-lang]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const lang = btn.getAttribute('data-lang');
+        setLanguage(lang);
+      });
+    });
+    updateLangSwitcherUI(getLanguage());
+  }
+
+  // Early-apply <html lang> so first paint has correct attribute.
+  try { document.documentElement.setAttribute('lang', getLanguage()); } catch (e) { /* ignore */ }
+
+  function init() {
+    applyLanguage(getLanguage());
+    initLangSwitcher();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Expose API
+  window.t = t;
+  window.i18n = {
+    t,
+    getLanguage,
+    setLanguage,
+    applyLanguage,
+    supported: SUPPORTED,
+  };
+})();

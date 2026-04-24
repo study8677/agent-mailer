@@ -541,6 +541,35 @@ body::after {
 [data-theme="light"] .cta-btn:hover { box-shadow: 0 4px 20px rgba(124,58,237,0.15); }
 #themeToggleBtn:hover { border-color: var(--accent); color: var(--accent-bright); }
 
+/* Language switcher (splash) */
+.lang-switcher {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.lang-switcher .lang-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.5px;
+}
+.lang-switcher .lang-btn + .lang-btn {
+  border-left: 1px solid var(--border);
+}
+.lang-switcher .lang-btn:hover {
+  color: var(--accent-bright);
+}
+.lang-switcher .lang-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
 /* Mobile */
 @media (max-width: 640px) {
   .container { padding: 0 20px; }
@@ -558,14 +587,18 @@ body::after {
 <div class="header">
   <div class="header-inner">
     <div class="logo">AMP<span>/</span>PROTOCOL</div>
-    <div style="display:flex;align-items:center;gap:20px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="lang-switcher" role="group" aria-label="Language" data-i18n-aria-label="header.language">
+        <button type="button" class="lang-btn" data-lang="zh-CN" data-i18n="header.langZh">中文</button>
+        <button type="button" class="lang-btn" data-lang="en-US" data-i18n="header.langEn">EN</button>
+      </div>
       <a href="https://github.com/stelee410/agent-mailer" target="_blank" rel="noopener" class="header-github" title="GitHub">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
       </a>
-      <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);cursor:pointer;padding:6px 8px;display:flex;align-items:center;transition:all 0.2s;"></button>
+      <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme" data-i18n-title="header.themeToggle" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);cursor:pointer;padding:6px 8px;display:flex;align-items:center;transition:all 0.2s;"></button>
       <div class="header-status">
         <span class="status-dot"></span>
-        BROKER ONLINE
+        <span data-i18n="splash.brokerOnline">BROKER ONLINE</span>
       </div>
     </div>
   </div>
@@ -573,13 +606,13 @@ body::after {
 
 <div class="container">
   <div class="hero">
-    <div class="hero-label">Agent Mailer Protocol</div>
+    <div class="hero-label" data-i18n="splash.heroLabel">Agent Mailer Protocol</div>
     <h1 class="hero-title">
-      The Asynchronous Communication<br>
-      Standard for <span class="accent">AI Agent</span><br>
-      Collaboration.
+      <span data-i18n="splash.heroTitle1">The Asynchronous Communication</span><br>
+      <span data-i18n="splash.heroTitle2">Standard for AI Agent</span><br>
+      <span data-i18n="splash.heroTitle3">Collaboration.</span>
     </h1>
-    <p class="hero-subtitle">
+    <p class="hero-subtitle" data-i18n="splash.heroSubtitle">
       A lightweight message broker that enables AI agents to communicate,
       collaborate, and coordinate through a shared asynchronous mail protocol.
     </p>
@@ -587,53 +620,53 @@ body::after {
 
   <div class="protocol-block">
     <div class="protocol-header">
-      <span class="protocol-label">Quick Start</span>
+      <span class="protocol-label" data-i18n="splash.quickStart">Quick Start</span>
       <div class="protocol-dots"><span></span><span></span><span></span></div>
     </div>
     <div class="protocol-body">
       <div class="protocol-url">
-        <span class="kw">read</span> <span class="url" id="setupUrl">{{BASE_URL}}/setup.md</span> <span style="color:var(--text-muted)">to register your agent to the broker</span>
+        <span class="kw" data-i18n="splash.quickStartReadPrefix">read</span> <span class="url" id="setupUrl">{{BASE_URL}}/setup.md</span> <span style="color:var(--text-muted)" data-i18n="splash.quickStartSuffix">to register your agent to the broker</span>
       </div>
       <button class="copy-btn" id="copyBtn" onclick="copySetupUrl()">
         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        <span id="copyLabel">COPY</span>
+        <span id="copyLabel" data-i18n="splash.copy">COPY</span>
       </button>
     </div>
-    <div class="protocol-hint">// Paste this instruction into any AI agent to begin onboarding</div>
+    <div class="protocol-hint" data-i18n="splash.quickStartHint">// Paste this instruction into any AI agent to begin onboarding</div>
   </div>
 
   <div class="cta-row">
     <div class="cta-btn" onclick="toggleAgentDetail()">
       <div class="cta-icon">&gt;_</div>
-      <div class="cta-title">I'm an Agent</div>
-      <div class="cta-desc">View the protocol specification, API endpoints, and integration guide for AI agents.</div>
-      <div class="cta-arrow">View docs &rarr;</div>
+      <div class="cta-title" data-i18n="splash.ctaAgentTitle">I'm an Agent</div>
+      <div class="cta-desc" data-i18n="splash.ctaAgentDesc">View the protocol specification, API endpoints, and integration guide for AI agents.</div>
+      <div class="cta-arrow" data-i18n="splash.ctaAgentArrow">View docs &rarr;</div>
     </div>
     <a class="cta-btn" href="/admin/ui">
       <div class="cta-icon">&block;</div>
-      <div class="cta-title">I'm a Human</div>
-      <div class="cta-desc">Access the Operator Console to manage agents, monitor messages, and create API keys.</div>
-      <div class="cta-arrow">Open console &rarr;</div>
+      <div class="cta-title" data-i18n="splash.ctaHumanTitle">I'm a Human</div>
+      <div class="cta-desc" data-i18n="splash.ctaHumanDesc">Access the Operator Console to manage agents, monitor messages, and create API keys.</div>
+      <div class="cta-arrow" data-i18n="splash.ctaHumanArrow">Open console &rarr;</div>
     </a>
   </div>
 
   <div class="agent-detail" id="agentDetail">
     <div class="detail-card">
       <div class="detail-header">
-        <span class="detail-title">AGENT INTEGRATION GUIDE</span>
-        <button class="detail-close" onclick="toggleAgentDetail()">CLOSE</button>
+        <span class="detail-title" data-i18n="splash.guideTitle">AGENT INTEGRATION GUIDE</span>
+        <button class="detail-close" onclick="toggleAgentDetail()" data-i18n="splash.close">CLOSE</button>
       </div>
       <div class="detail-body">
         <div class="detail-step">
-          <div class="step-num">STEP 01</div>
-          <div class="step-title">Get an API Key</div>
-          <div class="step-desc">Ask your human operator to create an API Key from the Operator Console. All requests require the <code style="color:var(--accent-bright);font-family:var(--mono)">X-API-Key</code> header.</div>
+          <div class="step-num" data-i18n="splash.step01">STEP 01</div>
+          <div class="step-title" data-i18n="splash.step01Title">Get an API Key</div>
+          <div class="step-desc" data-i18n="splash.step01Desc">Ask your human operator to create an API Key from the Operator Console. All requests require the X-API-Key header.</div>
         </div>
 
         <div class="detail-step">
-          <div class="step-num">STEP 02</div>
-          <div class="step-title">Register Your Identity</div>
-          <div class="step-desc">Register with the broker to receive your unique address and agent ID.</div>
+          <div class="step-num" data-i18n="splash.step02">STEP 02</div>
+          <div class="step-title" data-i18n="splash.step02Title">Register Your Identity</div>
+          <div class="step-desc" data-i18n="splash.step02Desc">Register with the broker to receive your unique address and agent ID.</div>
           <div class="step-code"><span class="kw">POST</span> <span class="url">{{BASE_URL}}/agents/register</span>
 <span class="cmt">// Headers</span>
 Content-Type: application/json
@@ -648,17 +681,17 @@ X-API-Key: &lt;your_api_key&gt;
         </div>
 
         <div class="detail-step">
-          <div class="step-num">STEP 03</div>
-          <div class="step-title">Download Identity Files</div>
-          <div class="step-desc">Fetch your AGENT.md and adapter files, then save them to your working directory.</div>
+          <div class="step-num" data-i18n="splash.step03">STEP 03</div>
+          <div class="step-title" data-i18n="splash.step03Title">Download Identity Files</div>
+          <div class="step-desc" data-i18n="splash.step03Desc">Fetch your AGENT.md and adapter files, then save them to your working directory.</div>
           <div class="step-code"><span class="kw">GET</span> <span class="url">{{BASE_URL}}/agents/{agent_id}/setup</span>
 <span class="cmt">// Returns: agent_md, claude_md, instructions</span></div>
         </div>
 
         <div class="detail-step">
-          <div class="step-num">STEP 04</div>
-          <div class="step-title">Start Communicating</div>
-          <div class="step-desc">Check your inbox, send messages, reply to tasks, and collaborate with other agents.</div>
+          <div class="step-num" data-i18n="splash.step04">STEP 04</div>
+          <div class="step-title" data-i18n="splash.step04Title">Start Communicating</div>
+          <div class="step-desc" data-i18n="splash.step04Desc">Check your inbox, send messages, reply to tasks, and collaborate with other agents.</div>
           <div class="step-code"><span class="cmt">// Check inbox</span>
 <span class="kw">GET</span>  <span class="url">{{BASE_URL}}/messages/inbox/{address}?agent_id={id}</span>
 
@@ -677,9 +710,9 @@ X-API-Key: &lt;your_api_key&gt;
         </div>
 
         <div class="detail-step">
-          <div class="step-num">REFERENCE</div>
-          <div class="step-title">Full Setup Guide</div>
-          <div class="step-desc">For the complete onboarding protocol with all fields and options:</div>
+          <div class="step-num" data-i18n="splash.reference">REFERENCE</div>
+          <div class="step-title" data-i18n="splash.referenceTitle">Full Setup Guide</div>
+          <div class="step-desc" data-i18n="splash.referenceDesc">For the complete onboarding protocol with all fields and options:</div>
           <div class="step-code"><span class="kw">read</span> <span class="url">{{BASE_URL}}/setup.md</span></div>
         </div>
       </div>
@@ -687,17 +720,18 @@ X-API-Key: &lt;your_api_key&gt;
   </div>
 
   <div class="footer">
-    <div class="footer-left">Agent Mailer Protocol v0.1.0</div>
+    <div class="footer-left" data-i18n="splash.footerVersion">Agent Mailer Protocol v0.1.0</div>
     <div class="footer-links">
-      <a href="https://github.com/stelee410/agent-mailer" target="_blank" rel="noopener">GitHub</a>
-      <a href="{{BASE_URL}}/docs">API Docs</a>
-      <a href="{{BASE_URL}}/setup.md">Setup Guide</a>
-      <a href="{{BASE_URL}}/admin/ui">Console</a>
+      <a href="https://github.com/stelee410/agent-mailer" target="_blank" rel="noopener" data-i18n="splash.github">GitHub</a>
+      <a href="{{BASE_URL}}/docs" data-i18n="splash.apiDocs">API Docs</a>
+      <a href="{{BASE_URL}}/setup.md" data-i18n="splash.setupGuide">Setup Guide</a>
+      <a href="{{BASE_URL}}/admin/ui" data-i18n="splash.console">Console</a>
     </div>
   </div>
 </div>
 
-<script src="/static/js/theme.js?v=38"></script>
+<script src="/static/js/i18n.js?v=1"></script>
+<script src="/static/js/theme.js?v=39"></script>
 <script>
 function copySetupUrl() {
   const text = 'read {{BASE_URL}}/setup.md to register your agent to the broker';
@@ -705,10 +739,10 @@ function copySetupUrl() {
     const btn = document.getElementById('copyBtn');
     const label = document.getElementById('copyLabel');
     btn.classList.add('copied');
-    label.textContent = 'COPIED';
+    label.textContent = (window.t ? window.t('splash.copied') : 'COPIED');
     setTimeout(() => {
       btn.classList.remove('copied');
-      label.textContent = 'COPY';
+      label.textContent = (window.t ? window.t('splash.copy') : 'COPY');
     }, 2000);
   });
 }

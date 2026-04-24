@@ -20,7 +20,7 @@ function hydrateMarkdownBodies(root) {
     try {
       el.innerHTML = decodeURIComponent(enc);
     } catch (err) {
-      el.textContent = '(Failed to render message body)';
+      el.textContent = t('render.mdFailed');
       return;
     }
     el.querySelectorAll('a[href]').forEach(a => {
@@ -100,7 +100,7 @@ function formatAttachmentsMd(attachments) {
 }
 
 function buildMessageMarkdown(m) {
-  const subject = (m.subject && String(m.subject).trim()) || '(no subject)';
+  const subject = (m.subject && String(m.subject).trim()) || t('common.noSubject');
   let body = m.body && String(m.body).trim();
   if (!body && m.body_html) body = htmlToPlainText(m.body_html);
   if (!body) body = '';
@@ -142,19 +142,19 @@ async function copyMessageAsMarkdown(msgId, ev) {
   if (ev && ev.stopPropagation) ev.stopPropagation();
   const m = (typeof msgCache !== 'undefined') ? msgCache[msgId] : null;
   if (!m) {
-    showToast('未找到邮件内容', 'error');
+    showToast(t('toast.msgNotFound'), 'error');
     return;
   }
   const md = buildMessageMarkdown(m);
   const ok = await writeClipboardText(md);
   if (ok) {
-    showToast('已复制到剪贴板', 'success');
+    showToast(t('toast.copied'), 'success');
     return;
   }
   // Last-resort manual fallback: show a prompt so the user can Ctrl+C the text.
-  try { window.prompt('复制失败，请手动复制：', md); }
+  try { window.prompt(t('toast.copyFailed'), md); }
   catch (e) { /* ignore */ }
-  showToast('自动复制失败，已打开手动复制窗口', 'error');
+  showToast(t('toast.autoCopyFailed'), 'error');
 }
 
 // --- Save message to team knowledge base ---
@@ -184,23 +184,23 @@ async function saveMessageToTeam(msgId, ev) {
   if (ev && ev.stopPropagation) ev.stopPropagation();
   const m = (typeof msgCache !== 'undefined') ? msgCache[msgId] : null;
   if (!m) {
-    showToast('未找到邮件内容', 'error');
+    showToast(t('toast.msgNotFound'), 'error');
     return;
   }
   const teamId = resolveTeamForMessage(m);
   if (!teamId) {
-    showToast('当前邮箱未加入任何 Team，无法保存到知识库', 'error');
+    showToast(t('toast.noTeam'), 'error');
     return;
   }
-  const title = (m.subject && String(m.subject).trim()) || '(no subject)';
+  const title = (m.subject && String(m.subject).trim()) || t('common.noSubject');
   const content = buildMessageMarkdown(m);
   try {
     const res = await upsertTeamMemory(teamId, { title, content });
-    showToast('已保存到 Team 知识库', 'success');
+    showToast(t('toast.savedToTeam'), 'success');
     return res;
   } catch (e) {
-    const msg = (e && e.message) ? e.message : '保存失败';
-    showToast('保存失败：' + msg, 'error');
+    const msg = (e && e.message) ? e.message : t('toast.saveFailed');
+    showToast(t('toast.saveFailedPrefix') + msg, 'error');
   }
 }
 
@@ -211,7 +211,10 @@ function showConfirm(title, body, confirmLabel) {
     document.getElementById('confirmTitle').textContent = title;
     document.getElementById('confirmBody').textContent = body;
     const okBtn = document.getElementById('confirmOk');
-    okBtn.textContent = confirmLabel || '确认';
+    okBtn.textContent = confirmLabel || t('common.confirm');
+    // Ensure cancel label reflects current language too.
+    const cancelBtn = document.getElementById('confirmCancel');
+    if (cancelBtn) cancelBtn.textContent = t('common.cancel');
     overlay.classList.add('visible');
 
     function cleanup(result) {

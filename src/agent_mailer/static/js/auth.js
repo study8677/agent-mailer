@@ -16,14 +16,14 @@ function showLoginForm() {
   document.getElementById('loginFormWrap').style.display = '';
   document.getElementById('registerFormWrap').style.display = 'none';
   document.getElementById('loginError').style.display = 'none';
-  document.getElementById('loginSubtitle').textContent = 'Operator Console — Sign in to continue';
+  document.getElementById('loginSubtitle').textContent = t('login.subtitleSignIn');
 }
 
 function showRegisterForm() {
   document.getElementById('loginFormWrap').style.display = 'none';
   document.getElementById('registerFormWrap').style.display = '';
   document.getElementById('registerError').style.display = 'none';
-  document.getElementById('loginSubtitle').textContent = 'Create a new account';
+  document.getElementById('loginSubtitle').textContent = t('login.subtitleRegister');
 }
 
 async function doLogin() {
@@ -33,12 +33,12 @@ async function doLogin() {
   const password = document.getElementById('loginPassword').value;
   errEl.style.display = 'none';
   if (!username || !password) {
-    errEl.textContent = 'Please enter username and password.';
+    errEl.textContent = t('login.errorMissingCredentials');
     errEl.style.display = '';
     return;
   }
   btn.disabled = true;
-  btn.textContent = 'Signing in...';
+  btn.textContent = t('login.signingIn');
   try {
     const resp = await fetch(BASE + '/users/login', {
       method: 'POST',
@@ -48,14 +48,14 @@ async function doLogin() {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || 'Login failed');
+      throw new Error(err.detail || t('login.errorLoginFailed'));
     }
     window.location.reload();
   } catch (e) {
     errEl.textContent = e.message;
     errEl.style.display = '';
     btn.disabled = false;
-    btn.textContent = 'Sign In';
+    btn.textContent = t('login.signIn');
   }
 }
 
@@ -67,12 +67,12 @@ async function doRegister() {
   const invite_code = document.getElementById('regInviteCode').value.trim();
   errEl.style.display = 'none';
   if (!username || !password || !invite_code) {
-    errEl.textContent = 'Please fill in all fields.';
+    errEl.textContent = t('login.errorMissingFields');
     errEl.style.display = '';
     return;
   }
   btn.disabled = true;
-  btn.textContent = 'Creating account...';
+  btn.textContent = t('login.creatingAccount');
   try {
     const resp = await fetch(BASE + '/users/register', {
       method: 'POST',
@@ -82,7 +82,7 @@ async function doRegister() {
     });
     if (!resp.ok) {
       const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || 'Registration failed');
+      throw new Error(err.detail || t('login.errorRegisterFailed'));
     }
     // After registration, attempt login
     const loginResp = await fetch(BASE + '/users/login', {
@@ -92,7 +92,7 @@ async function doRegister() {
       body: JSON.stringify({ username, password }),
     });
     if (!loginResp.ok) {
-      errEl.textContent = 'Account created! Please sign in.';
+      errEl.textContent = t('login.accountCreated');
       errEl.style.display = '';
       showLoginForm();
       return;
@@ -102,7 +102,7 @@ async function doRegister() {
     errEl.textContent = e.message;
     errEl.style.display = '';
     btn.disabled = false;
-    btn.textContent = 'Create Account';
+    btn.textContent = t('login.createAccount');
   }
 }
 
@@ -132,7 +132,7 @@ async function checkAuth() {
     if (currentUser.impersonated_by) {
       const banner = document.getElementById('impersonateBanner');
       document.getElementById('impersonateLabel').textContent =
-        '正在以 ' + currentUser.username + ' 身份操作';
+        t('header.impersonating', { name: currentUser.username });
       banner.style.display = '';
     }
     // Show username in header
