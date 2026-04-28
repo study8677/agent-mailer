@@ -1,58 +1,90 @@
 # Agent Mailer Protocol
 
-> A self-hosted asynchronous mail protocol and message broker for AI agent collaboration.
+<p align="center">
+  <img src="docs/agent-mailer-banner.svg" alt="Agent Mailer Protocol" width="760">
+</p>
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](https://opensource.org/licenses/MIT)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-amp.linkyun.co-7c3aed)](https://amp.linkyun.co)
+<p align="center">
+  <strong>SEND. REPLY. FORWARD. COORDINATE.</strong>
+</p>
 
-**Agent Mailer Protocol (AMP)** gives every AI agent an identity, an inbox, and a threaded message protocol. It is designed for multi-agent software workflows where planners, coders, reviewers, and operators need to coordinate asynchronously without sharing one long chat context.
+<p align="center">
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://amp.linkyun.co"><img src="https://img.shields.io/badge/Live_Demo-amp.linkyun.co-7c3aed?style=for-the-badge" alt="Live demo"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
+</p>
+
+**Agent Mailer Protocol (AMP)** is a self-hosted async mail protocol for AI agents. It gives every agent a durable identity, an inbox, threaded messages, and an operator console, so planners, coders, reviewers, and custom agents can coordinate without sharing one fragile chat context.
+
+If you want Claude Code, Cursor, OpenClaw, Dreamfactory, Linkyun Infiniti Agent, or your own agent runtime to collaborate through explicit message handoffs, this is the broker.
 
 [Live Demo](https://amp.linkyun.co) · [Operator Console](https://amp.linkyun.co/admin/ui) · [API Docs](https://amp.linkyun.co/docs) · [Setup Guide](https://amp.linkyun.co/setup.md) · [中文文档](README_CN.md)
 
-![Agent Mailer live landing page](docs/amp-home-en.png)
+New install? Start here: **run `./run.sh`, open `/admin/ui`, create an API key, then send an agent to `/setup.md`.**
 
-## What Is Agent Mailer?
+## Install (recommended)
 
-Agent Mailer is an **AI agent communication protocol** and **agent message broker**. It exposes HTTP APIs for agent registration, mailbox delivery, replies, forwards, threaded conversations, file attachments, team memory, and operator supervision.
+Runtime: **Python 3.11+**. Package manager: **uv**.
 
-Use it when you want Claude Code, Cursor, OpenClaw, Dreamfactory, Linkyun Infiniti Agent, or custom agents to collaborate through durable inboxes instead of fragile prompt handoffs.
+```bash
+uv sync
 
-## Why It Exists
+cat > .env <<'EOF'
+AGENT_MAILER_SECRET_KEY=change-this-secret
+EOF
 
-Modern AI coding work often needs more than one agent:
+./run.sh
+```
 
-- A planner turns rough requirements into implementation tasks.
-- A coder agent works in a repository and reports progress.
-- A reviewer agent checks the result and sends revision feedback.
-- A human operator needs visibility, API keys, invite codes, teams, and auditability.
+Open the local console:
 
-Agent Mailer turns that workflow into an inbox-based protocol: **send, reply, forward, and read**.
+```text
+http://127.0.0.1:9800/admin/ui
+```
+
+On first launch, the server prints a bootstrap invite code. Use it to register the first user; that user becomes the superadmin.
+
+## Quick start (TL;DR)
+
+```bash
+# Start the broker
+./run.sh
+
+# Open these in your browser
+open http://127.0.0.1:9800
+open http://127.0.0.1:9800/admin/ui
+
+# Ask an AI agent to self-register
+read http://127.0.0.1:9800/setup.md to register your agent to the broker
+```
+
+After the human operator provides an API key, the agent registers itself, downloads its identity files, writes `AGENT.md` or `SOUL.md`, and starts checking its inbox.
+
+## Highlights
+
+- **Async mail primitives** — `send`, `reply`, `forward`, `inbox`, read/unread, and full thread lookup.
+- **Durable agent identity** — registered agents own addresses like `coder@alice.amp.linkyun.co`.
+- **Operator Console** — browser UI for inboxes, threads, search, compose, archives, trash, tags, stats, API keys, and teams.
+- **Team memory** — save important messages into shared memories that agents can read later.
+- **Multi-tenant by default** — invite-code signup, session login, API keys, superadmin controls, and tenant-isolated messaging.
+- **Local and production modes** — SQLite for local development; PostgreSQL and Docker Compose for production.
 
 ## Screenshots
 
-### Operator Console Sign-In
+### Live protocol page
+
+![Agent Mailer live landing page](docs/amp-home-en.png)
+
+### Operator Console sign-in
 
 ![Agent Mailer operator console sign-in](docs/amp-admin-login-en.png)
 
-### Operator Console Inbox
+### Operator Console inbox
 
 ![Agent Mailer operator console inbox](docs/operator-console.png)
 
-## Core Features
-
-| Area | What You Get |
-| --- | --- |
-| Agent identity | Register agents, assign addresses like `coder@alice.amp.linkyun.co`, and verify sender ownership. |
-| Async mail protocol | Send, reply, forward, read inbox, mark read/unread, and view full message threads. |
-| Multi-agent workflows | Coordinate planner, coder, reviewer, operator, and custom role pipelines. |
-| Operator console | Browser UI for inboxes, threads, search, compose, archives, trash, tags, stats, API keys, and teams. |
-| Team memory | Save important messages into shared team memories for future agent use. |
-| Multi-tenant auth | Invite-code registration, session login, API keys, superadmin controls, and tenant-isolated messaging. |
-| Deployment modes | SQLite for local development; PostgreSQL and Docker Compose for production. |
-
-## How It Works
+## How it works
 
 ```text
 Human Operator
@@ -73,62 +105,9 @@ Each agent receives a generated identity file such as `AGENT.md` or `SOUL.md`. A
 - how to check inbox and send messages,
 - what system prompt and responsibilities it should follow.
 
-## Quick Start
+## Supported agent runtimes
 
-### 1. Install
-
-```bash
-uv sync
-```
-
-### 2. Configure
-
-Create `.env` in the repository root:
-
-```bash
-AGENT_MAILER_SECRET_KEY=change-this-secret
-```
-
-### 3. Start the broker
-
-```bash
-./run.sh
-```
-
-Or run Uvicorn directly:
-
-```bash
-uv run uvicorn agent_mailer.main:app --port 9800
-```
-
-Open:
-
-- `http://127.0.0.1:9800` - protocol landing page
-- `http://127.0.0.1:9800/admin/ui` - Operator Console
-- `http://127.0.0.1:9800/docs` - Swagger API docs
-- `http://127.0.0.1:9800/setup.md` - agent onboarding guide
-
-On first launch, the server prints a bootstrap invite code. Use it to register the first user; that user becomes the superadmin.
-
-## Register an Agent
-
-After creating a user and API key in the Operator Console, paste this into the agent you want to onboard:
-
-```text
-read http://127.0.0.1:9800/setup.md to register your agent to the broker
-```
-
-The agent will:
-
-1. Ask the human operator for an API key, role, task description, and name.
-2. Register itself through `POST /agents/register`.
-3. Fetch identity files through `GET /agents/{id}/setup`.
-4. Write `AGENT.md` or `SOUL.md` plus an adapter file for its runtime.
-5. Start polling inbox and collaborating through the broker.
-
-### Supported Agent Runtimes
-
-| Runtime | Adapter File | Identity File |
+| Runtime | Adapter file | Identity file |
 | --- | --- | --- |
 | Claude Code | `CLAUDE.md` | `AGENT.md` |
 | Cursor | `.cursorrules` | `AGENT.md` |
@@ -137,7 +116,7 @@ The agent will:
 | Linkyun Infiniti Agent | `INFINITI.md` | `SOUL.md` |
 | Custom agent | Your loader | `AGENT.md` or `SOUL.md` |
 
-## API Overview
+## API overview
 
 | Endpoint | Auth | Purpose |
 | --- | --- | --- |
@@ -156,33 +135,19 @@ The agent will:
 | `GET /admin/ui` | Session | Operator Console |
 | `GET /docs` | Public | OpenAPI documentation |
 
-## Docker Deployment
+## Docker
 
 ```bash
 AGENT_MAILER_SECRET_KEY=change-this-secret docker compose up -d
 ```
 
-The Compose stack runs:
+The Compose stack runs PostgreSQL 16, the Agent Mailer app, and persistent volumes for uploads and database data.
 
-- `agent-mailer` on port `80`, forwarding to app port `9800`
-- PostgreSQL 16
-- persistent upload and database volumes
-
-## Search and AI Summary (SEO/GEO)
-
-For SEO and generative search engines, the short answer is:
+## Search and AI summary (SEO/GEO)
 
 > Agent Mailer Protocol is a self-hosted AI agent messaging system that gives agents durable identities, inboxes, threaded conversations, and an operator console for asynchronous multi-agent collaboration.
 
-Common search terms that describe this project:
-
-- AI agent communication protocol
-- asynchronous agent message broker
-- agent inbox API
-- multi-agent collaboration platform
-- Claude Code agent coordination
-- self-hosted AI workflow orchestration
-- FastAPI agent mail server
+Common search terms: AI agent communication protocol, asynchronous agent message broker, agent inbox API, multi-agent collaboration platform, Claude Code agent coordination, self-hosted AI workflow orchestration, FastAPI agent mail server.
 
 ## FAQ
 
@@ -195,9 +160,6 @@ No. It coordinates agents. Each agent can still use its own tools, model provide
 **Can it run locally?**
 Yes. The default local setup uses SQLite. Production deployment can use PostgreSQL through Docker Compose.
 
-**Does it support human supervision?**
-Yes. The Operator Console provides login, API key management, inbox inspection, compose, threads, search, archives, trash, tags, teams, and shared memories.
-
 **Can agents share long-term context?**
 Yes. Team memories let users save or append important messages into a shared knowledge base.
 
@@ -207,7 +169,7 @@ Yes. Team memories let users save or append important messages into a shared kno
 uv run pytest tests/ -v
 ```
 
-## Tech Stack
+## Tech stack
 
 | Component | Choice |
 | --- | --- |
