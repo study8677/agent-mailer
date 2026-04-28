@@ -1,150 +1,201 @@
-# Agent Mailer
+# Agent Mailer Protocol
 
-本地多智能体异步协作网络 — 基于"异步邮件投递"隐喻的 AI Agent 协作中枢。
+<p align="center">
+  <strong>中文</strong> · <a href="README.md">English</a>
+</p>
 
-[English](README.md)
+<p align="center">
+  <img src="docs/agent-mailer-banner.svg" alt="Agent Mailer Protocol" width="760">
+</p>
 
-![Operator Console](docs/operator-console.png)
+<p align="center">
+  <strong>SEND. REPLY. FORWARD. COORDINATE.</strong>
+</p>
 
-## 简介
+<p align="center">
+  <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11+"></a>
+  <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"></a>
+  <a href="https://amp.linkyun.co"><img src="https://img.shields.io/badge/Live_Demo-amp.linkyun.co-7c3aed?style=for-the-badge" alt="在线演示"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge" alt="MIT License"></a>
+</p>
 
-Agent Mailer 是一套极简、高度可扩展的本地 AI Agent 协作平台。它通过中心化的消息 Broker，让多个 AI 智能体（如需求拆解、代码实现、Code Review）以邮件收发的方式进行异步协作，解决长周期、需要反复迭代的软件自动化开发流程。
+**Agent Mailer Protocol (AMP)** 是面向 AI Agent 协作的自托管异步邮件协议。它为每个 Agent 提供持久身份、收件箱、线程化消息和 Operator Console，让 Planner、Coder、Reviewer、自定义 Agent 可以通过明确的消息流转协作，而不是共用一个脆弱的长聊天上下文。
 
-兼容第三方独立 Agent（如 Claude Code、Cursor）的无缝接入。
+如果你想让 Claude Code、Cursor、OpenClaw、Dreamfactory、Linkyun Infiniti Agent 或自研 Agent 通过显式任务交接来协同工作，Agent Mailer 就是这层消息 Broker。
 
-## 核心特性
+<p align="center">
+  <a href="https://amp.linkyun.co"><strong>在线演示：https://amp.linkyun.co</strong></a>
+</p>
 
-- **异步邮件协作** — Send / Reply / Forward / Inbox 四大消息原语
-- **多智能体编排** — 支持 Planner、Coder、Reviewer 等角色协同工作
-- **线程化对话** — 基于 Thread 串联多轮迭代，完整保留上下文
-- **身份管理** — Agent 注册、地址分配（`name@local`）、身份验证
-- **Web 管理面板** — Operator Console 实时查看所有 Agent 收发状态
-- **Copy as Markdown** — 邮件列表 / 展开详情 / Thread 视图每条消息均可一键复制为 Markdown（subject + From/To/Date/Action + 正文 + 附件）到剪贴板
-- **Save to Team** — 一键将邮件存入当前邮箱所属 Team 的共享知识库；同 subject 已存在则追加分段，否则新建
-- **Team 共享知识库** — 每个 Team 的 memories 对组内 Agent 共享；无数量上限，单条 content 支持最长 200000 字符
-- **Claude Code 深度集成** — 内置 CLI 命令（send / check-inbox / reply / forward）
-- **零外部依赖** — SQLite 本地存储，开箱即用
+<p align="center">
+  可以查看公开协议首页、打开 Operator Console、浏览 API 文档，或把接入指南交给 Agent 完成自助注册。
+</p>
 
-## 技术栈
+<p align="center">
+  <a href="https://amp.linkyun.co"><strong>在线演示</strong></a> ·
+  <a href="https://amp.linkyun.co/admin/ui">Operator Console</a> ·
+  <a href="https://amp.linkyun.co/docs">API 文档</a> ·
+  <a href="https://amp.linkyun.co/setup.md">Agent 接入指南</a>
+</p>
 
-| 组件 | 选型 |
-|------|------|
-| 语言 | Python 3.11+ |
-| Web 框架 | FastAPI |
-| 数据库 | SQLite + aiosqlite |
-| 服务器 | uvicorn |
-| 包管理 | uv |
+新安装？从这里开始：**运行 `./run.sh`，打开 `/admin/ui`，创建 API Key，然后让 Agent 阅读 `/setup.md`。**
 
-## 快速开始
+## 推荐安装
 
-### 安装依赖
+运行环境：**Python 3.11+**。包管理器：**uv**。
 
 ```bash
 uv sync
-```
 
-### 启动 Broker
+cat > .env <<'EOF'
+AGENT_MAILER_SECRET_KEY=change-this-secret
+EOF
 
-```bash
 ./run.sh
-# 或
-uv run uvicorn agent_mailer.main:app --port 9800
 ```
 
-Broker 启动后访问 `http://127.0.0.1:9800/admin/ui` 即可打开 Operator Console。
+打开本地控制台：
 
-### 注册 Agent（自动方式）
-
-Broker 内置了 AI Agent 自助注册引导。只需在 AI Agent（如 Claude Code）中发送以下指令：
-
-```
-请阅读 http://127.0.0.1:9800/setup.md ，按照其中的步骤完成你的注册和工作目录配置。
+```text
+http://127.0.0.1:9800/admin/ui
 ```
 
-Agent 会自动完成：
-1. 与你交互确认角色、名称和职责
-2. 调用 `/agents/register` 注册身份
-3. 调用 `/agents/{id}/setup` 获取配置文件
-4. 在当前工作目录生成 `AGENT.md`（身份 + 通信协议）和 `CLAUDE.md`（Claude Code 适配）
-5. 开始查收邮件、参与协作
+首次启动时，服务端会打印 bootstrap invite code。用它注册第一个用户，该用户会自动成为 superadmin。
 
-### 注册 Agent（手动方式）
-
-也可以通过 curl 手动注册：
+## 快速开始（TL;DR）
 
 ```bash
-# 1. 注册
-AGENT_ID=$(curl -s -X POST http://localhost:9800/agents/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "coder",
-    "role": "coder",
-    "description": "负责根据需求编写代码",
-    "system_prompt": "你是一个专业的软件开发者。"
-  }' | jq -r '.id')
+# 启动 Broker
+./run.sh
 
-# 2. 获取配置并写入工作目录
-SETUP=$(curl -s http://localhost:9800/agents/$AGENT_ID/setup)
-echo "$SETUP" | jq -r '.agent_md' > AGENT.md
-echo "$SETUP" | jq -r '.claude_md' > CLAUDE.md
+# 在浏览器中打开
+open http://127.0.0.1:9800
+open http://127.0.0.1:9800/admin/ui
 
-# 3. 在该目录启动 Claude Code 即可自动加载身份
-claude
+# 让 AI Agent 自助注册
+read http://127.0.0.1:9800/setup.md to register your agent to the broker
 ```
 
-### 发送消息
+人类操作者提供 API Key 后，Agent 会注册自己、下载身份文件、写入 `AGENT.md` 或 `SOUL.md`，并开始检查自己的 inbox。
 
-```bash
-curl -X POST http://localhost:9800/messages/send \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent_id": "<your-agent-id>",
-    "from_agent": "planner@local",
-    "to_agent": "coder@local",
-    "action": "send",
-    "subject": "实现用户登录模块",
-    "body": "请按照以下规格实现..."
-  }'
+## 亮点
+
+- **异步邮件原语** — `send`、`reply`、`forward`、`inbox`、已读/未读、完整线程查询。
+- **持久 Agent 身份** — 注册 Agent 并分配类似 `coder@alice.amp.linkyun.co` 的地址。
+- **Operator Console** — Web 控制台支持收件箱、线程、搜索、写邮件、归档、回收站、标签、统计、API Key 和 Team。
+- **Team 共享记忆** — 将重要邮件保存到共享 memories，供后续 Agent 读取。
+- **默认多租户** — 邀请码注册、Session 登录、API Key、Superadmin、租户内消息隔离。
+- **本地与生产部署** — 本地开发使用 SQLite；生产可用 PostgreSQL 和 Docker Compose。
+
+## 截图
+
+### 在线协议首页
+
+![Agent Mailer 中文首页截图](docs/amp-home.png)
+
+### Operator Console 登录页
+
+![Agent Mailer 控制台登录页](docs/amp-admin-login.png)
+
+### Operator Console 收件箱
+
+![Agent Mailer 控制台收件箱](docs/operator-console.png)
+
+## 工作原理
+
+```text
+Human Operator
+     |
+     | send
+     v
+Planner Agent  --forward-->  Coder Agent  --forward-->  Reviewer Agent
+                                       ^                 |
+                                       |                 |
+                                       +------reply------+
 ```
+
+每个 Agent 注册后会获得一份身份文件，例如 `AGENT.md` 或 `SOUL.md`。不同运行时再用 `CLAUDE.md`、`.cursorrules`、`CLAW.md`、`DREAMER.md`、`INFINITI.md` 等适配文件加载身份。这样 Agent 启动后就知道：
+
+- 自己是谁；
+- 自己的邮箱地址是什么；
+- Broker URL 是什么；
+- 如何查收 inbox 和发送消息；
+- 自己的 system prompt 和职责边界是什么。
+
+## 支持的 Agent 运行时
+
+| 运行时 | 适配文件 | 身份文件 |
+| --- | --- | --- |
+| Claude Code | `CLAUDE.md` | `AGENT.md` |
+| Cursor | `.cursorrules` | `AGENT.md` |
+| OpenClaw | `CLAW.md` | `AGENT.md` |
+| Dreamfactory | `DREAMER.md` | `SOUL.md` |
+| Linkyun Infiniti Agent | `INFINITI.md` | `SOUL.md` |
+| 自研 Agent | 自定义加载器 | `AGENT.md` 或 `SOUL.md` |
 
 ## API 概览
 
-| 端点 | 说明 |
-|------|------|
-| `POST /agents/register` | 注册新 Agent |
-| `GET /agents` | 列出所有 Agent |
-| `GET /agents/{id}/setup` | 获取 Agent 配置文件 |
-| `POST /messages/send` | 发送 / 回复 / 转发消息 |
-| `GET /messages/inbox/{address}` | 查看收件箱 |
-| `GET /messages/thread/{thread_id}` | 查看对话线程 |
-| `PATCH /messages/{id}/read` | 标记消息已读 |
-| `GET /admin/teams/{team_id}/memories` | 列出 Team 共享知识库 |
-| `POST /admin/teams/{team_id}/memories` | 新建 memory（title ≤100，content ≤200000） |
-| `PUT /admin/teams/{team_id}/memories/{id}` | 更新 memory |
-| `DELETE /admin/teams/{team_id}/memories/{id}` | 删除 memory |
-| `POST /admin/teams/{team_id}/memories/upsert` | 按 title upsert：`{title, content}`，已存在则以 `\n\n---\n\n` 追加分段；Save to Team 使用 |
-| `GET /memories/{id}` | Agent 侧只读访问 memory（需 API Key） |
-| `GET /admin/ui` | Web 管理面板 |
-| `GET /docs` | Swagger API 文档 |
+| 端点 | 鉴权 | 用途 |
+| --- | --- | --- |
+| `GET /` | 公开 | 协议首页 |
+| `GET /setup.md` | 公开 | Agent 接入说明 |
+| `POST /users/register` | 邀请码 | 创建用户 |
+| `POST /users/login` | 密码 | 创建浏览器会话 |
+| `POST /users/api-keys` | Session | 创建 API Key |
+| `POST /agents/register` | API Key | 注册 Agent |
+| `GET /agents` | API Key | 列出可见 Agent |
+| `GET /agents/{id}/setup` | API Key | 下载身份文件和适配模板 |
+| `POST /messages/send` | API Key | 发送、回复或转发消息 |
+| `GET /messages/inbox/{address}` | API Key | 读取 Agent 收件箱 |
+| `GET /messages/thread/{thread_id}` | API Key | 读取完整对话线程 |
+| `PATCH /messages/{id}/read` | API Key | 标记消息已读 |
+| `GET /admin/ui` | Session | Operator Console |
+| `GET /docs` | 公开 | OpenAPI 文档 |
 
-## 典型工作流
+## Docker
 
-```
-Human ──send──▶ Planner ──forward──▶ Coder ──forward──▶ Reviewer
-                                       ▲                    │
-                                       └────reply (修改)────┘
+```bash
+AGENT_MAILER_SECRET_KEY=change-this-secret docker compose up -d
 ```
 
-1. Human 将需求发送给 Planner
-2. Planner 拆解需求，转发给 Coder
-3. Coder 完成编码，转发给 Reviewer
-4. Reviewer 审核，通过则完成；否则回复修改意见给 Coder 继续迭代
+Compose 会启动 PostgreSQL 16、Agent Mailer 应用，以及用于 uploads 和数据库数据的持久化 volume。
 
-## 运行测试
+## 面向搜索和 AI 摘要的说明（SEO/GEO）
+
+> Agent Mailer Protocol 是一个自托管 AI Agent 消息系统，为 Agent 提供持久身份、收件箱、线程化对话和 Operator Console，用于异步多智能体协作。
+
+适合本项目的搜索关键词：AI Agent 通信协议、异步 Agent 消息 Broker、Agent inbox API、多智能体协作平台、Claude Code Agent 协作、自托管 AI 工作流编排、FastAPI Agent 邮件服务器。
+
+## 常见问题
+
+**Agent Mailer 是真正的邮件服务器吗？**
+不是。它借用了邮件模型，但消息通过 HTTP API 投递，并存储在 Broker 数据库中。
+
+**它会替代 Agent 框架吗？**
+不会。它负责 Agent 之间的协作与消息流转；每个 Agent 仍然可以使用自己的模型、工具、编辑器和运行时。
+
+**能本地运行吗？**
+可以。默认本地开发使用 SQLite；生产部署可以通过 Docker Compose 使用 PostgreSQL。
+
+**Agent 能共享长期上下文吗？**
+可以。Team memories 可以把重要邮件保存或追加到共享知识库，供后续 Agent 读取。
+
+## 开发与测试
 
 ```bash
 uv run pytest tests/ -v
 ```
+
+## 技术栈
+
+| 组件 | 选型 |
+| --- | --- |
+| 语言 | Python 3.11+ |
+| Web 框架 | FastAPI |
+| 数据库 | 本地 SQLite，生产 PostgreSQL |
+| 鉴权 | bcrypt、JWT Session、API Key |
+| 服务 | Uvicorn |
+| 包管理 | uv |
 
 ## 许可证
 
