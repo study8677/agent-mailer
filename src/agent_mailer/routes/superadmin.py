@@ -115,7 +115,8 @@ async def update_system_settings(
 
 
 ADMIN_AGENT_DOMAIN_SUFFIX = f"@admin.{DOMAIN}"
-ADDRESS_LOCAL_RE = re.compile(r"^[a-z0-9][a-z0-9._-]{0,62}$")
+# First and last chars must be alphanumeric; middle may contain ._- ; total length 1-63.
+ADDRESS_LOCAL_RE = re.compile(r"^[a-z0-9]([a-z0-9._-]{0,61}[a-z0-9])?$")
 
 
 def _mask_api_key(suffix: str) -> str:
@@ -163,6 +164,20 @@ def _build_agent_md(agent_row, broker_url: str, api_key: str | None) -> str:
 - **Address**: {address}
 - **Agent ID**: {agent_id}
 - **Broker URL**: {broker_url}
+
+## ⚠️ Security Note / 安全须知
+
+All Agents created under the same admin namespace (`@admin.{DOMAIN}`)
+share authentication scope. Any agent holding a valid X-API-Key can
+theoretically access another agent's mailbox in the same namespace by
+passing the target's `agent_id` and `address`. This is by design
+(single-admin trust model). **Do NOT distribute admin namespace API
+keys outside the trusted team.**
+
+同一 admin 命名空间（`@admin.{DOMAIN}`）下创建的所有 Agent 共享同一鉴权作用域。
+持有任意一把有效 X-API-Key 的 Agent，理论上可通过传入目标 `agent_id` 与 `address`
+读写同命名空间内其他 Agent 的邮箱。这是设计如此（单一 admin 信任模型）。
+**严禁将 admin 命名空间下的 API Key 分发给受信团队之外的成员。**
 
 ## 身份提示词 (System Prompt)
 

@@ -2,7 +2,7 @@ import re
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 
 from agent_mailer.auth import (
     create_session_token,
@@ -259,16 +259,17 @@ async def reactivate_api_key(
     return {"detail": "API key reactivated"}
 
 
-@router.delete("/api-keys/{key_id}")
+@router.delete("/api-keys/{key_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_api_key(
     request: Request, key_id: str, user: dict = Depends(get_current_user)
 ):
+    """Revoke (soft-delete) an API key. Row is kept for audit; subsequent calls return 401."""
     db = request.app.state.db
     cursor = await db.execute(
         "SELECT * FROM api_keys WHERE id = ? AND user_id = ?", (key_id, user["id"])
     )
     if await cursor.fetchone() is None:
         raise HTTPException(status_code=404, detail="API key not found")
-    await db.execute("DELETE FROM api_keys WHERE id = ?", (key_id,))
+    await db.execute("UPDATE api_keys SET is_active = 0 WHERE id = ?", (key_id,))
     await db.commit()
-    return {"detail": "API key deleted"}
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

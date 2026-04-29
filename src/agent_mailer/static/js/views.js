@@ -1807,7 +1807,23 @@ function closeAdminAgentModal() {
   if (o) { o.style.display = 'none'; o.innerHTML = ''; }
 }
 
-function openCreateAdminAgent() {
+async function _fetchTeamOptions(selectedId) {
+  let teams = [];
+  try {
+    teams = await api('/admin/teams');
+  } catch (e) {
+    return `<option value="">${esc(t('admin.agentsTeamLoadFailed'))}</option>`;
+  }
+  const opts = [`<option value="">${esc(t('admin.agentsTeamNone'))}</option>`];
+  for (const team of teams) {
+    const sel = (team.id === selectedId) ? ' selected' : '';
+    opts.push(`<option value="${esc(team.id)}"${sel}>${esc(team.name)}</option>`);
+  }
+  return opts.join('');
+}
+
+async function openCreateAdminAgent() {
+  const teamOpts = await _fetchTeamOptions(null);
   _adminAgentsModal(`
     <h3 style="margin-top:0">${esc(t('admin.agentsNewTitle'))}</h3>
     <div class="login-form">
@@ -1838,6 +1854,10 @@ function openCreateAdminAgent() {
         <label>${esc(t('admin.agentsFieldTags'))}</label>
         <input type="text" id="aaTags" placeholder="${esc(t('admin.agentsTagsHint'))}">
       </div>
+      <div>
+        <label>${esc(t('admin.agentsFieldTeam'))}</label>
+        <select id="aaTeamId" style="width:100%">${teamOpts}</select>
+      </div>
       <div id="aaError" class="login-error" style="display:none"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="modal-cancel" onclick="closeAdminAgentModal()">${esc(t('common.cancel'))}</button>
@@ -1856,6 +1876,7 @@ async function submitCreateAdminAgent() {
   const local = document.getElementById('aaAddrLocal').value.trim();
   const tagsRaw = document.getElementById('aaTags').value.trim();
   const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const teamId = document.getElementById('aaTeamId')?.value || null;
   btn.disabled = true;
   try {
     const created = await api('/superadmin/agents', {
@@ -1868,6 +1889,7 @@ async function submitCreateAdminAgent() {
         description: document.getElementById('aaDescription').value.trim(),
         system_prompt: document.getElementById('aaSystemPrompt').value,
         tags,
+        team_id: teamId || null,
       }),
     });
     closeAdminAgentModal();
@@ -1880,9 +1902,10 @@ async function submitCreateAdminAgent() {
   }
 }
 
-function openEditAdminAgent(agentId) {
+async function openEditAdminAgent(agentId) {
   const agent = (window._adminAgentsCache || []).find(a => a.id === agentId);
   if (!agent) return;
+  const teamOpts = await _fetchTeamOptions(agent.team_id);
   _adminAgentsModal(`
     <h3 style="margin-top:0">${esc(t('admin.agentsEditTitle', { name: agent.name }))}</h3>
     <div class="login-form">
@@ -1906,6 +1929,10 @@ function openEditAdminAgent(agentId) {
         <label>${esc(t('admin.agentsFieldTags'))}</label>
         <input type="text" id="aaTags" value="${esc((agent.tags || []).join(', '))}">
       </div>
+      <div>
+        <label>${esc(t('admin.agentsFieldTeam'))}</label>
+        <select id="aaTeamId" style="width:100%">${teamOpts}</select>
+      </div>
       <div id="aaError" class="login-error" style="display:none"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="modal-cancel" onclick="closeAdminAgentModal()">${esc(t('common.cancel'))}</button>
@@ -1922,6 +1949,7 @@ async function submitEditAdminAgent(agentId) {
   btn.disabled = true;
   const tagsRaw = document.getElementById('aaTags').value.trim();
   const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const teamId = document.getElementById('aaTeamId')?.value || '';
   try {
     await api(`/superadmin/agents/${encodeURIComponent(agentId)}`, {
       method: 'PUT',
@@ -1931,6 +1959,7 @@ async function submitEditAdminAgent(agentId) {
         description: document.getElementById('aaDescription').value.trim(),
         system_prompt: document.getElementById('aaSystemPrompt').value,
         tags,
+        team_id: teamId,
       }),
     });
     closeAdminAgentModal();

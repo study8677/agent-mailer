@@ -633,6 +633,11 @@ async def test_admin_agents_export_agent_md_and_soul_md(client, superadmin):
     assert a_body["filename"] == "AGENT.md"
     assert "exp prompt" in a_body["content"]
     assert "<your_api_key>" in a_body["content"]
+    # P3-1: bilingual security note must appear, between Identity and System Prompt sections.
+    assert "Security Note" in a_body["content"] and "安全须知" in a_body["content"]
+    sec_idx = a_body["content"].index("Security Note")
+    sys_idx = a_body["content"].index("身份提示词")
+    assert sec_idx < sys_idx
 
     r = await c.get(
         f"/superadmin/agents/{aid}/export?format=soul_md", headers=h
@@ -640,6 +645,31 @@ async def test_admin_agents_export_agent_md_and_soul_md(client, superadmin):
     s_body = r.json()
     assert s_body["filename"] == "SOUL.md"
     assert s_body["content"] == a_body["content"]
+
+
+async def test_admin_agents_address_local_regex_tightened(client, superadmin):
+    c, token, _ = superadmin
+    h = {"Authorization": f"Bearer {token}"}
+    # Trailing punctuation no longer accepted (P3-3).
+    r = await c.post(
+        "/superadmin/agents", json={"name": "x", "address_local": "foo."}, headers=h
+    )
+    assert r.status_code == 400
+    r = await c.post(
+        "/superadmin/agents", json={"name": "x", "address_local": "-foo"}, headers=h
+    )
+    assert r.status_code == 400
+    # Single char and well-formed multi still work.
+    r = await c.post("/superadmin/agents", json={"name": "x", "address_local": "a"}, headers=h)
+    assert r.status_code == 201
+    r = await c.post(
+        "/superadmin/agents", json={"name": "y", "address_local": "a-b"}, headers=h
+    )
+    assert r.status_code == 201
+    r = await c.post(
+        "/superadmin/agents", json={"name": "z", "address_local": "foo.bar"}, headers=h
+    )
+    assert r.status_code == 201
 
 
 async def test_admin_agents_non_superadmin_forbidden(client, superadmin):
