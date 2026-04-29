@@ -246,7 +246,7 @@ async def reactivate_api_key(
     return {"detail": "API key reactivated"}
 
 
-@router.delete("/api-keys/{key_id}")
+@router.delete("/api-keys/{key_id}", status_code=204)
 async def delete_api_key(
     request: Request, key_id: str, user: dict = Depends(get_current_user)
 ):
@@ -256,6 +256,6 @@ async def delete_api_key(
     )
     if await cursor.fetchone() is None:
         raise HTTPException(status_code=404, detail="API key not found")
-    await db.execute("DELETE FROM api_keys WHERE id = ?", (key_id,))
+    await db.execute("UPDATE api_keys SET is_active = 0 WHERE id = ?", (key_id,))
     await db.commit()
-    return {"detail": "API key deleted"}
+    return Response(status_code=204)
