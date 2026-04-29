@@ -21,7 +21,9 @@ PG_SCHEMA = [
         created_at TEXT NOT NULL,
         tags TEXT NOT NULL DEFAULT '[]',
         user_id TEXT,
-        last_seen TEXT
+        last_seen TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        api_key_suffix TEXT NOT NULL DEFAULT ''
     )
     """,
     """
@@ -452,6 +454,8 @@ async def init_db(db):
         await _add_column_if_missing(db, "agents", "last_seen", "TEXT")
         await _add_column_if_missing(db, "users", "filter_tags", "TEXT NOT NULL DEFAULT '[]'")
         await _add_column_if_missing(db, "agents", "team_id", "TEXT REFERENCES teams(id) ON DELETE SET NULL")
+        await _add_column_if_missing(db, "agents", "status", "TEXT NOT NULL DEFAULT 'active'")
+        await _add_column_if_missing(db, "agents", "api_key_suffix", "TEXT NOT NULL DEFAULT ''")
         # pg_trgm extension + GIN indexes for full-text search
         try:
             await db.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
@@ -476,6 +480,8 @@ async def init_db(db):
         await _add_column_if_missing(db, "agents", "last_seen", "TEXT")
         await _add_column_if_missing(db, "users", "filter_tags", "TEXT NOT NULL DEFAULT '[]'")
         await _add_column_if_missing(db, "agents", "team_id", "TEXT REFERENCES teams(id) ON DELETE SET NULL")
+        await _add_column_if_missing(db, "agents", "status", "TEXT NOT NULL DEFAULT 'active'")
+        await _add_column_if_missing(db, "agents", "api_key_suffix", "TEXT NOT NULL DEFAULT ''")
     await _seed_default_settings(db)
     await db.commit()
 

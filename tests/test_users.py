@@ -513,6 +513,163 @@ async def test_registration_still_requires_invite_when_enabled(client, superadmi
     assert resp.status_code == 400
 
 
+# --- Superadmin: managed agents (Agents Management) ---
+
+
+async def test_admin_agents_create_lists_and_masks_key(client, superadmin):
+    c, token, _ = superadmin
+    r = await c.post(
+        "/superadmin/agents",
+        json={"name": "pm", "role": "pm", "system_prompt": "Hi."},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 201
+    body = r.json()
+    assert body["address"] == "pm@admin.amp.linkyun.co"
+    assert body["status"] == "active"
+    assert body["api_key_plaintext"].startswith("amk_")
+    assert body["api_key_masked"].startswith("amk_****") and len(body["api_key_masked"]) == 14
+    aid = body["id"]
+
+    r = await c.get("/superadmin/agents", headers={"Authorization": f"Bearer {token}"})
+    assert r.status_code == 200
+    assert any(a["id"] == aid for a in r.json())
+    # plaintext never appears in list responses
+    assert all("api_key_plaintext" not in a for a in r.json())
+
+
+async def test_admin_agents_duplicate_address_409(client, superadmin):
+    c, token, _ = superadmin
+    h = {"Authorization": f"Bearer {token}"}
+    await c.post("/superadmin/agents", json={"name": "dup"}, headers=h)
+    r = await c.post("/superadmin/agents", json={"name": "dup"}, headers=h)
+    assert r.status_code == 409
+
+
+async def test_admin_agents_invalid_address_local(client, superadmin):
+    c, token, _ = superadmin
+    r = await c.post(
+        "/superadmin/agents",
+        json={"name": "bad", "address_local": "Has Space"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert r.status_code == 400
+
+
+async def test_admin_agents_update_only_allowed_fields(client, superadmin):
+    c, token, _ = superadmin
+    h = {"Authorization": f"Bearer {token}"}
+    r = await c.post("/superadmin/agents", json={"name": "edit"}, headers=h)
+    aid = r.json()["id"]
+    addr = r.json()["address"]
+    r = await c.put(
+        f"/superadmin/agents/{aid}",
+        json={"role": "coder", "description": "updated", "tags": ["p1"]},
+        headers=h,
+    )
+    assert r.status_code == 200
+    assert r.json()["role"] == "coder"
+    assert r.json()["description"] == "updated"
+    assert r.json()["tags"] == ["p1"]
+    # name/address unchanged
+    assert r.json()["address"] == addr
+
+
+async def test_admin_agents_soft_delete_and_address_reserved(client, superadmin):
+    c, token, _ = superadmin
+    h = {"Authorization": f"Bearer {token}"}
+    r = await c.post("/superadmin/agents", json={"name": "softdel"}, headers=h)
+    aid = r.json()["id"]
+    r = await c.delete(f"/superadmin/agents/{aid}", headers=h)
+    assert r.status_code == 200
+
+    r = await c.get("/superadmin/agents", headers=h)
+    assert all(a["id"] != aid for a in r.json())
+
+    r = await c.get("/superadmin/agents?include_deleted=true", headers=h)
+    assert any(a["id"] == aid and a["status"] == "deleted" for a in r.json())
+
+    # Address is reserved.
+    r = await c.post("/superadmin/agents", json={"name": "softdel"}, headers=h)
+    assert r.status_code == 409
+
+
+async def test_admin_agents_regenerate_key_invalidates_old(client, superadmin):
+    c, token, _ = superadmin
+    h = {"Authorization": f"Bearer {token}"}
+    r = await c.post("/superadmin/agents", json={"name": "rotate"}, headers=h)
+    aid = r.json()["id"]
+    old_key = r.json()["api_key_plaintext"]
+
+    # Old key works.
+    r = await c.get("/agents", headers={"X-API-Key": old_key})
+    assert r.status_code == 200
+
+    r = await c.post(f"/superadmin/agents/{aid}/regenerate-key", headers=h)
+    assert r.status_code == 200
+    new_key = r.json()["api_key_plaintext"]
+    assert new_key != old_key
+
+    r_old = await c.get("/agents", headers={"X-API-Key": old_key})
+    assert r_old.status_code == 401
+    r_new = await c.get("/agents", headers={"X-API-Key": new_key})
+    assert r_new.status_code == 200
+
+
+async def test_admin_agents_export_agent_md_and_soul_md(client, superadmin):
+    c, token, _ = superadmin
+    h = {"Authorization": f"Bearer {token}"}
+    r = await c.post(
+        "/superadmin/agents",
+        json={"name": "exp", "system_prompt": "exp prompt"},
+        headers=h,
+    )
+    aid = r.json()["id"]
+    r = await c.get(
+        f"/superadmin/agents/{aid}/export?format=agent_md", headers=h
+    )
+    assert r.status_code == 200
+    a_body = r.json()
+    assert a_body["filename"] == "AGENT.md"
+    assert "exp prompt" in a_body["content"]
+    assert "<your_api_key>" in a_body["content"]
+
+    r = await c.get(
+        f"/superadmin/agents/{aid}/export?format=soul_md", headers=h
+    )
+    s_body = r.json()
+    assert s_body["filename"] == "SOUL.md"
+    assert s_body["content"] == a_body["content"]
+
+
+async def test_admin_agents_non_superadmin_forbidden(client, superadmin):
+    c, token, _ = superadmin
+    r = await c.post(
+        "/superadmin/invite-codes", headers={"Authorization": f"Bearer {token}"}
+    )
+    invite = r.json()["code"]
+    await c.post(
+        "/users/register",
+        json={"username": "regularaa", "password": "pwd-norm-1234", "invite_code": invite},
+    )
+    r = await c.post(
+        "/users/login", json={"username": "regularaa", "password": "pwd-norm-1234"}
+    )
+    nh = {"Authorization": f"Bearer {r.json()['token']}"}
+    assert (await c.get("/superadmin/agents", headers=nh)).status_code == 403
+    assert (await c.post("/superadmin/agents", json={"name": "x"}, headers=nh)).status_code == 403
+    assert (
+        await c.put("/superadmin/agents/missing", json={"role": "x"}, headers=nh)
+    ).status_code == 403
+    assert (await c.delete("/superadmin/agents/missing", headers=nh)).status_code == 403
+    assert (
+        await c.post("/superadmin/agents/missing/regenerate-key", headers=nh)
+    ).status_code == 403
+    assert (
+        await c.get("/superadmin/agents/missing/export?format=agent_md", headers=nh)
+    ).status_code == 403
+
+
 # --- Full lifecycle E2E ---
 
 
