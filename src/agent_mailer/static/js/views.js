@@ -1704,7 +1704,9 @@ async function changePassword() {
 // --- Admin (superadmin) view ---
 
 async function showAdmin() {
-  if (!currentUser?.is_superadmin) return;
+  // Both admins and regular users land here. Admins see the full panel
+  // (system settings + users + invite codes + every agent); regular
+  // users see only their own self-service "My Agents" section.
   clearNav();
   setSidebarSpecialMode('none');
   document.getElementById('navAdmin').classList.add('active');
@@ -1712,19 +1714,32 @@ async function showAdmin() {
   await renderAdmin();
 }
 
+// Returns the API base path for the current user's agent management.
+// Admins go through /superadmin/agents (global); everyone else goes
+// through /users/me/agents (self-service, server-enforced ownership).
+function _agentApiBase() {
+  return currentUser?.is_superadmin ? '/superadmin/agents' : '/users/me/agents';
+}
+
 async function renderAdmin() {
   if (currentView?.type !== 'admin') return;
   const main = document.getElementById('main');
   main.innerHTML = `<div class="empty">${esc(t('common.loading'))}</div>`;
 
+  const isAdmin = !!currentUser?.is_superadmin;
   let users = [], inviteCodes = [], settings = { invite_required: true }, adminAgents = [];
   try {
-    [users, inviteCodes, settings, adminAgents] = await Promise.all([
-      api('/superadmin/users'),
-      api('/superadmin/invite-codes'),
-      api('/superadmin/settings'),
-      api('/superadmin/agents'),
-    ]);
+    if (isAdmin) {
+      [users, inviteCodes, settings, adminAgents] = await Promise.all([
+        api('/superadmin/users'),
+        api('/superadmin/invite-codes'),
+        api('/superadmin/settings'),
+        api(_agentApiBase()),
+      ]);
+    } else {
+      // Regular users only see their own agents — no settings/users/invite-codes panels.
+      adminAgents = await api(_agentApiBase());
+    }
   } catch (e) {
     main.innerHTML = `<div class="card"><p class="empty">${esc(t('admin.loadFailed', { msg: e.message }))}</p></div>`;
     return;
@@ -1777,15 +1792,32 @@ async function renderAdmin() {
     </div>`;
 
   const agentsHtml = renderAdminAgentsSection(adminAgents);
+  const pageTitle = isAdmin ? t('admin.title') : t('admin.titleSelfService');
+  const agentsHeading = isAdmin ? t('admin.agentsTitle') : t('admin.agentsTitleSelfService');
+
+  const adminOnlySections = isAdmin ? `
+    <div class="admin-section">
+      <h3>${esc(t('admin.users'))}</h3>
+      ${usersHtml}
+    </div>
+
+    <div class="admin-section">
+      <h3>${esc(t('admin.inviteCodes'))}</h3>
+      <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px">
+        <button class="btn btn-primary" onclick="generateInviteCode()">${esc(t('admin.generateCode'))}</button>
+        <span id="inviteCodeStatus" style="font-size:13px"></span>
+      </div>
+      <div id="inviteCodesTable">${codesHtml}</div>
+    </div>` : '';
 
   main.innerHTML = `
     <div class="card">
-      <h2>${esc(t('admin.title'))}</h2>
+      <h2>${esc(pageTitle)}</h2>
 
-      ${settingsHtml}
+      ${isAdmin ? settingsHtml : ''}
 
       <div class="admin-section">
-        <h3>${esc(t('admin.agentsTitle'))}</h3>
+        <h3>${esc(agentsHeading)}</h3>
         <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <button class="btn btn-primary" onclick="openCreateAdminAgent()">+ ${esc(t('admin.agentsNew'))}</button>
           <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)">
@@ -1796,19 +1828,7 @@ async function renderAdmin() {
         <div id="adminAgentsTable">${agentsHtml}</div>
       </div>
 
-      <div class="admin-section">
-        <h3>${esc(t('admin.users'))}</h3>
-        ${usersHtml}
-      </div>
-
-      <div class="admin-section">
-        <h3>${esc(t('admin.inviteCodes'))}</h3>
-        <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px">
-          <button class="btn btn-primary" onclick="generateInviteCode()">${esc(t('admin.generateCode'))}</button>
-          <span id="inviteCodeStatus" style="font-size:13px"></span>
-        </div>
-        <div id="inviteCodesTable">${codesHtml}</div>
-      </div>
+      ${adminOnlySections}
     </div>`;
 }
 
@@ -1860,7 +1880,7 @@ async function reloadAdminAgents() {
   const includeDeleted = !!document.getElementById('agentsIncludeDeleted')?.checked;
   if (!tableEl) return;
   try {
-    const list = await api('/superadmin/agents' + (includeDeleted ? '?include_deleted=true' : ''));
+    const list = await api(_agentApiBase() + (includeDeleted ? '?include_deleted=true' : ''));
     window._adminAgentsCache = list;
     tableEl.innerHTML = renderAdminAgentsSection(list);
   } catch (e) {
@@ -1964,7 +1984,7 @@ async function submitCreateAdminAgent() {
   const teamId = document.getElementById('aaTeamId')?.value || '';
   btn.disabled = true;
   try {
-    const created = await api('/superadmin/agents', {
+    const created = await api(_agentApiBase(), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2036,7 +2056,7 @@ async function submitEditAdminAgent(agentId) {
   const tags = tagsRaw ? tagsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
   const teamId = document.getElementById('aaTeamId')?.value || '';
   try {
-    await api(`/superadmin/agents/${encodeURIComponent(agentId)}`, {
+    await api(`${_agentApiBase()}/${encodeURIComponent(agentId)}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2064,7 +2084,7 @@ async function deleteAdminAgent(agentId, name) {
   );
   if (!ok) return;
   try {
-    await api(`/superadmin/agents/${encodeURIComponent(agentId)}`, { method: 'DELETE' });
+    await api(`${_agentApiBase()}/${encodeURIComponent(agentId)}`, { method: 'DELETE' });
     await reloadAdminAgents();
   } catch (e) {
     alert(t('common.failedPrefix') + e.message);
@@ -2079,7 +2099,7 @@ async function regenerateAdminAgentKey(agentId, name) {
   );
   if (!ok) return;
   try {
-    const result = await api(`/superadmin/agents/${encodeURIComponent(agentId)}/regenerate-key`, { method: 'POST' });
+    const result = await api(`${_agentApiBase()}/${encodeURIComponent(agentId)}/regenerate-key`, { method: 'POST' });
     showAdminAgentApiKey(result.api_key_plaintext, name, t('admin.agentsKeyRegenTitle'));
     await reloadAdminAgents();
   } catch (e) {
@@ -2162,7 +2182,7 @@ function _renderExportModal({ agentId, name, format, filename, content, hasFresh
 
 async function exportAdminAgentMd(agentId, name, format) {
   try {
-    const result = await api(`/superadmin/agents/${encodeURIComponent(agentId)}/export?format=${encodeURIComponent(format)}`);
+    const result = await api(`${_agentApiBase()}/${encodeURIComponent(agentId)}/export?format=${encodeURIComponent(format)}`);
     let content = result.content;
     let hasFreshKey = false;
     const last = window._adminAgentLastKey;
@@ -2200,7 +2220,7 @@ async function regenAndDownloadAdminAgentMd(agentId, name, format, filename) {
   let regen;
   try {
     regen = await api(
-      `/superadmin/agents/${encodeURIComponent(agentId)}/regenerate-key`,
+      `${_agentApiBase()}/${encodeURIComponent(agentId)}/regenerate-key`,
       { method: 'POST' },
     );
   } catch (e) {
@@ -2217,7 +2237,7 @@ async function regenAndDownloadAdminAgentMd(agentId, name, format, filename) {
   let downloaded = false;
   try {
     const exp = await api(
-      `/superadmin/agents/${encodeURIComponent(agentId)}/export?format=${encodeURIComponent(format)}`,
+      `${_agentApiBase()}/${encodeURIComponent(agentId)}/export?format=${encodeURIComponent(format)}`,
     );
     const content = exp.content.split('<your_api_key>').join(regen.api_key_plaintext);
     downloadTextAs(filename, content);

@@ -160,10 +160,9 @@ async function checkAuth() {
     }
     // Show username in header
     document.getElementById('headerUsername').textContent = currentUser.username;
-    // Show admin nav if superadmin
-    if (currentUser.is_superadmin) {
-      document.getElementById('navAdmin').style.display = '';
-    }
+    // Show admin/management nav for everyone — non-admins land on the
+    // self-service "My Agents" view; admins also get system-wide controls.
+    document.getElementById('navAdmin').style.display = '';
     // Fetch human operator info
     try {
       const opResp = await fetch(BASE + '/admin/human-operator', { credentials: 'same-origin' });

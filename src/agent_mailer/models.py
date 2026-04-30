@@ -1,9 +1,22 @@
 from typing import Literal
 
 import markdown as _md
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 ForwardScope = Literal["message", "thread"]
+
+
+def _empty_str_to_none(v):
+    """Coerce a client-supplied empty/whitespace string into ``None``.
+
+    HTML form serializers (and our team picker in views.js) emit ``""`` when
+    no option is chosen, which then collides with NOT-NULL/FK constraints in
+    PG. Use as a Pydantic validator with ``mode="before"`` on optional
+    foreign-key fields.
+    """
+    if isinstance(v, str) and v.strip() == "":
+        return None
+    return v
 
 _markdown_extensions = ["fenced_code", "tables", "nl2br", "sane_lists", "codehilite"]
 
@@ -176,6 +189,8 @@ class AdminAgentCreateRequest(BaseModel):
     tags: list[str] = []
     team_id: str | None = None
 
+    _normalize_team_id = field_validator("team_id", mode="before")(_empty_str_to_none)
+
 
 class AdminAgentUpdateRequest(BaseModel):
     role: str | None = None
@@ -211,6 +226,61 @@ class AdminAgentRegenerateKeyResponse(BaseModel):
 
 
 class AdminAgentExportResponse(BaseModel):
+    filename: str
+    content: str
+
+
+# --- User-owned (self-service) managed agents ---
+
+
+class UserAgentCreateRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=64)
+    address_local: str | None = None  # local-part; defaults to name
+    role: str = ""
+    description: str = ""
+    system_prompt: str = ""
+    tags: list[str] = []
+    team_id: str | None = None  # must belong to the requesting user (enforced server-side)
+
+    # Frontend team picker emits "" when no team is selected — coerce to NULL
+    # so PG's FK constraint doesn't reject the INSERT.
+    _normalize_team_id = field_validator("team_id", mode="before")(_empty_str_to_none)
+
+
+class UserAgentUpdateRequest(BaseModel):
+    role: str | None = None
+    description: str | None = None
+    system_prompt: str | None = None
+    tags: list[str] | None = None
+    team_id: str | None = None  # "" or None resets to NULL
+
+
+class UserAgentResponse(BaseModel):
+    id: str
+    name: str
+    address: str
+    role: str
+    description: str
+    system_prompt: str
+    tags: list[str] = []
+    team_id: str | None = None
+    status: str = "active"
+    created_at: str
+    last_seen: str | None = None
+    api_key_masked: str = ""
+
+
+class UserAgentCreateResponse(UserAgentResponse):
+    api_key_plaintext: str  # one-time only
+
+
+class UserAgentRegenerateKeyResponse(BaseModel):
+    agent_id: str
+    api_key_masked: str
+    api_key_plaintext: str
+
+
+class UserAgentExportResponse(BaseModel):
     filename: str
     content: str
 
