@@ -323,6 +323,72 @@ async def test_user_team_id_can_be_unset_to_null(client, two_users):
     assert r.json()["team_id"] is None
 
 
+async def test_user_create_agent_with_empty_string_team_id_treated_as_null(
+    client, two_users
+):
+    """Regression for the FK-violation hot-fix.
+
+    Production frontend's team picker emits ``team_id: ""`` when the user
+    leaves the team selector empty. Pre-fix, the empty string flowed all
+    the way to PG and FK'd; the model-layer validator now coerces it to
+    NULL so the agent is created un-teamed.
+    """
+    r = await client.post(
+        "/users/me/agents",
+        json={"name": "no-team", "team_id": ""},
+        headers=two_users["alice"],
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["team_id"] is None
+
+
+async def test_user_update_agent_with_empty_string_team_id_treated_as_null(
+    client, two_users
+):
+    """PUT path also has to survive ``team_id: ""``.
+
+    The handler already coerces falsy values via ``body.team_id or None``;
+    this test pins the behavior so future refactors can't quietly regress
+    the same FK-violation as the POST path did.
+    """
+    r = await client.post(
+        "/admin/teams",
+        json={"name": "t", "description": ""},
+        headers=two_users["alice"],
+    )
+    team_id = r.json()["id"]
+    r = await client.post(
+        "/users/me/agents",
+        json={"name": "u", "team_id": team_id},
+        headers=two_users["alice"],
+    )
+    aid = r.json()["id"]
+    r = await client.put(
+        f"/users/me/agents/{aid}",
+        json={"team_id": ""},
+        headers=two_users["alice"],
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["team_id"] is None
+
+
+async def test_user_create_agent_with_unknown_team_id_returns_400(client, two_users):
+    """A non-empty string that isn't one of the user's team ids must 400.
+
+    Coercing ``""`` to NULL must not also smuggle past
+    ``_validate_team_ownership`` for arbitrary garbage. We assert the
+    rejection is shaped as a 400 with the same detail the ownership
+    helper emits, so a forged client can't sneak a foreign team id in.
+    """
+    r = await client.post(
+        "/users/me/agents",
+        json={"name": "garbage", "team_id": "00000000-0000-0000-0000-000000000000"},
+        headers=two_users["alice"],
+    )
+    assert r.status_code == 400
+    assert "team" in r.json()["detail"].lower()
+
+
 # --- Cross-namespace bookkeeping ---
 
 

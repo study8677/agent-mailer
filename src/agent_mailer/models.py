@@ -1,9 +1,22 @@
 from typing import Literal
 
 import markdown as _md
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 ForwardScope = Literal["message", "thread"]
+
+
+def _empty_str_to_none(v):
+    """Coerce a client-supplied empty/whitespace string into ``None``.
+
+    HTML form serializers (and our team picker in views.js) emit ``""`` when
+    no option is chosen, which then collides with NOT-NULL/FK constraints in
+    PG. Use as a Pydantic validator with ``mode="before"`` on optional
+    foreign-key fields.
+    """
+    if isinstance(v, str) and v.strip() == "":
+        return None
+    return v
 
 _markdown_extensions = ["fenced_code", "tables", "nl2br", "sane_lists", "codehilite"]
 
@@ -176,6 +189,8 @@ class AdminAgentCreateRequest(BaseModel):
     tags: list[str] = []
     team_id: str | None = None
 
+    _normalize_team_id = field_validator("team_id", mode="before")(_empty_str_to_none)
+
 
 class AdminAgentUpdateRequest(BaseModel):
     role: str | None = None
@@ -226,6 +241,10 @@ class UserAgentCreateRequest(BaseModel):
     system_prompt: str = ""
     tags: list[str] = []
     team_id: str | None = None  # must belong to the requesting user (enforced server-side)
+
+    # Frontend team picker emits "" when no team is selected — coerce to NULL
+    # so PG's FK constraint doesn't reject the INSERT.
+    _normalize_team_id = field_validator("team_id", mode="before")(_empty_str_to_none)
 
 
 class UserAgentUpdateRequest(BaseModel):
