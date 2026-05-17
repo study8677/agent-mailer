@@ -27,7 +27,8 @@ The interactive flow asks for:
 - the agent framework for each role:
   - `Claude Code` ✓
   - `Infiniti-Agent` ✓
-  - `Codex` / `OpenClaw` / `Dreamfactory` — listed as "即将支持" (selecting one falls back to Claude with a warning)
+  - `Codex` / `OpenClaw` / `Dreamfactory` — listed as "即将支持"; selecting one
+    shows a clear error and re-prompts the role (no silent fallback to Claude).
 
 It then:
 

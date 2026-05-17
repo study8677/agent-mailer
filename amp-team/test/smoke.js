@@ -313,6 +313,114 @@ async function main() {
   });
 
   await test(
+    "P1-3: setup-fetch failure persists api_key with partial_setup_pending marker",
+    async () => {
+      const originalFetch = global.fetch;
+      let agentCounter = 0;
+      global.fetch = async (url, opts = {}) => {
+        if (url.endsWith("/users/login")) {
+          return jsonResponse(200, {
+            token: "stub-token",
+            user: {
+              id: "u1",
+              username: "stub-user",
+              is_superadmin: false,
+              created_at: "2026-01-01T00:00:00Z",
+            },
+          });
+        }
+        if (url.endsWith("/users/me/agents") && opts.method === "POST") {
+          const body = JSON.parse(opts.body);
+          agentCounter += 1;
+          return jsonResponse(201, {
+            id: `aid-${agentCounter}`,
+            name: body.name,
+            address: `${body.name}@stub-user.amp.linkyun.co`,
+            role: body.role,
+            description: "",
+            system_prompt: "",
+            tags: [],
+            team_id: null,
+            status: "active",
+            created_at: "2026-01-01T00:00:00Z",
+            last_seen: null,
+            api_key_masked: "******",
+            api_key_plaintext: `key-plain-${agentCounter}`,
+          });
+        }
+        if (/\/agents\/[^/]+\/setup$/.test(url)) {
+          return jsonResponse(503, { detail: "transient broker hiccup" });
+        }
+        return jsonResponse(404, { detail: "not stubbed" });
+      };
+
+      const promptStub = createPromptStub({
+        team: "smoke4",
+        brokerUrl: "https://stub.example",
+        pm: "claude",
+        dev: "claude",
+        reviewer: "claude",
+        support: "claude",
+        username: "stub-user",
+        password: "p@ss",
+      });
+      const promptsCacheKey = require.resolve("prompts");
+      require("prompts");
+      const origPromptsExports = require.cache[promptsCacheKey].exports;
+      require.cache[promptsCacheKey].exports = promptStub;
+      delete require.cache[require.resolve("../src/init")];
+      const { runInit } = require("../src/init");
+
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), "amp-team-test-setupfail-"));
+      try {
+        const code = await runInit(dir);
+        assert.equal(code, 2, `expected exit 2 on setup-fetch failure, got ${code}`);
+
+        // Critical assertion: api_key is on disk DESPITE setup having failed.
+        // Without the must-fix this would be missing and the agent would be
+        // orphaned on the broker.
+        const credPath = path.join(dir, "pm", ".amp-team", "credentials.json");
+        assert.ok(fs.existsSync(credPath), `credentials.json must exist: ${credPath}`);
+        const creds = JSON.parse(fs.readFileSync(credPath, "utf8"));
+        assert.ok(creds.api_key && creds.api_key.startsWith("key-plain-"),
+          `api_key must be persisted; got ${creds.api_key}`);
+        assert.equal(creds.partial_setup_pending, true,
+          "partial_setup_pending marker must be set so user knows setup didn't finish");
+
+        // POSIX permissions must still be 0600 even on the partial write.
+        if (process.platform !== "win32") {
+          const mode = fs.statSync(credPath).mode & 0o777;
+          assert.equal(mode, 0o600, `partial credentials must be 0600, got ${mode.toString(8)}`);
+        }
+
+        // Identity files MUST NOT exist — setup never returned the templates.
+        assert.ok(!fs.existsSync(path.join(dir, "pm", "AGENT.md")),
+          "AGENT.md must not exist when setup fetch failed");
+        assert.ok(!fs.existsSync(path.join(dir, "pm", "CLAUDE.md")),
+          "CLAUDE.md must not exist when setup fetch failed");
+
+        // inbox.js is copied early so user has a working inbox immediately.
+        assert.ok(fs.existsSync(path.join(dir, "pm", ".amp-team", "inbox.js")),
+          "inbox.js should be available even when setup failed");
+
+        // team.json reflects the partial state with the agent's id recorded.
+        const meta = JSON.parse(
+          fs.readFileSync(path.join(dir, ".amp-team", "team.json"), "utf8"),
+        );
+        assert.equal(meta.partial, true);
+        assert.equal(meta.failure.role, "pm");
+        assert.ok(meta.failure.error.includes("503"));
+        assert.equal(meta.agents.length, 1, "the pm agent must be recorded");
+        assert.equal(meta.agents[0].partial_setup_pending, true);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+        global.fetch = originalFetch;
+        require.cache[promptsCacheKey].exports = origPromptsExports;
+      }
+    },
+  );
+
+  await test(
     "framework: coming-soon picks (codex/openclaw/dreamfactory) hard-fail with retry",
     async () => {
       // Stateful prompt: pm gets asked twice (codex → claude), others claude.

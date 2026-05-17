@@ -111,6 +111,18 @@ async function runInit(cwd) {
       return 2;
     }
 
+    // SPEC §P1-3 must-fix: api_key_plaintext is broker-side one-shot. Persist
+    // it BEFORE any subsequent fallible operation (setup fetch, identity-file
+    // write, script generation). Otherwise a transient broker hiccup orphans
+    // the agent on the broker with no way to recover its key.
+    writePartialCredentials({
+      rootDir: cwd,
+      role: role.key,
+      framework,
+      agent,
+      brokerUrl: setup.brokerUrl,
+    });
+
     let setupResp;
     try {
       setupResp = await getAgentSetup(setup.brokerUrl, agent.id, agent.api_key_plaintext);
@@ -121,21 +133,34 @@ async function runInit(cwd) {
         error: `setup fetch failed: ${e.message}`,
         completed_roles: created.map((c) => c.role),
       };
-      // Still record the agent we did create so the user has its credentials.
-      teamMeta.agents.push({ role: role.key, id: agent.id, address: agent.address });
+      // The agent's key is already on disk (writePartialCredentials above) —
+      // record it in team.json with the partial_setup_pending marker so the
+      // user can re-run setup later without losing access.
+      teamMeta.agents.push({
+        role: role.key,
+        id: agent.id,
+        address: agent.address,
+        partial_setup_pending: true,
+      });
       writeTeamMeta(cwd, teamMeta);
       process.stderr.write(
         `${chalk.red("✖")} could not fetch /agents/${agent.id}/setup: ${e.message}\n`,
       );
+      process.stderr.write(
+        chalk.dim(
+          `  credentials saved to ${path.join(role.key, ".amp-team", "credentials.json")} ` +
+            `(partial_setup_pending: true) — re-run setup later to fetch identity files.\n`,
+        ),
+      );
       return 2;
     }
 
-    materializeRoleDir({
+    writeIdentityFiles({ rootDir: cwd, role: role.key, framework, setupResp });
+    finalizeCredentials({
       rootDir: cwd,
       role: role.key,
       framework,
       agent,
-      setupResp,
       brokerUrl: setup.brokerUrl,
     });
     writeStartScripts(cwd, role.key, framework);
@@ -260,11 +285,37 @@ async function loginInteractive(brokerUrl) {
   return null;
 }
 
-function materializeRoleDir({ rootDir, role, framework, agent, setupResp, brokerUrl }) {
+function writePartialCredentials({ rootDir, role, framework, agent, brokerUrl }) {
   const roleDir = path.join(rootDir, role);
   const ampTeamDir = path.join(roleDir, ".amp-team");
   fs.mkdirSync(ampTeamDir, { recursive: true });
 
+  const credentials = {
+    agent_id: agent.id,
+    address: agent.address,
+    api_key: agent.api_key_plaintext,
+    broker_url: brokerUrl,
+    role,
+    framework,
+    created_at: new Date().toISOString(),
+    partial_setup_pending: true,
+  };
+  writeSecretFile(
+    path.join(ampTeamDir, "credentials.json"),
+    JSON.stringify(credentials, null, 2) + "\n",
+  );
+
+  // Copy the inbox template verbatim now too — it has zero amp-team-package
+  // deps and the user gets a working inbox even if setup fetch fails next.
+  const inboxSrc = path.join(__dirname, "templates", "inbox.js");
+  fs.copyFileSync(inboxSrc, path.join(ampTeamDir, "inbox.js"));
+  if (process.platform !== "win32") {
+    fs.chmodSync(path.join(ampTeamDir, "inbox.js"), 0o755);
+  }
+}
+
+function writeIdentityFiles({ rootDir, role, framework, setupResp }) {
+  const roleDir = path.join(rootDir, role);
   // Identity file: AGENT.md for Claude, SOUL.md for Infiniti (per broker /setup
   // instructions: "Linkyun Infiniti Agent → INFINITI.md（引用 SOUL.md）").
   const identityFile = framework === "infiniti" ? "SOUL.md" : "AGENT.md";
@@ -275,7 +326,12 @@ function materializeRoleDir({ rootDir, role, framework, agent, setupResp, broker
   } else {
     fs.writeFileSync(path.join(roleDir, "CLAUDE.md"), setupResp.claude_md);
   }
+}
 
+function finalizeCredentials({ rootDir, role, framework, agent, brokerUrl }) {
+  // Rewrite credentials.json without `partial_setup_pending` — setup fetch
+  // succeeded and identity files are on disk, so this role is fully ready.
+  const credPath = path.join(rootDir, role, ".amp-team", "credentials.json");
   const credentials = {
     agent_id: agent.id,
     address: agent.address,
@@ -285,16 +341,7 @@ function materializeRoleDir({ rootDir, role, framework, agent, setupResp, broker
     framework,
     created_at: new Date().toISOString(),
   };
-  const credPath = path.join(ampTeamDir, "credentials.json");
   writeSecretFile(credPath, JSON.stringify(credentials, null, 2) + "\n");
-
-  // Copy the inbox template verbatim (zero amp-team-package deps at runtime).
-  const inboxSrc = path.join(__dirname, "templates", "inbox.js");
-  fs.copyFileSync(inboxSrc, path.join(ampTeamDir, "inbox.js"));
-  // Make it executable on POSIX so `./pm/.amp-team/inbox.js` works too.
-  if (process.platform !== "win32") {
-    fs.chmodSync(path.join(ampTeamDir, "inbox.js"), 0o755);
-  }
 }
 
 function writeSecretFile(filePath, contents) {
