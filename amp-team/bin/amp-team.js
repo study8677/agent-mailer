@@ -8,15 +8,15 @@ async function main() {
   if (argv.includes("--help") || argv.includes("-h")) {
     process.stdout.write(
       [
-        "zudui — register a 4-role agent team and scaffold workdirs.",
+        "amp-team — register a 4-role agent team and scaffold workdirs.",
         "",
         "Usage:",
-        "  zudui              run init flow in the current empty directory",
-        "  zudui --help       show this help",
-        "  zudui --version    show package version",
+        "  amp-team              run init flow in the current empty directory",
+        "  amp-team --help       show this help",
+        "  amp-team --version    show package version",
         "",
         "After init, each role has its own `start-<role>.sh` / `.cmd` to launch",
-        "the chosen agent framework, and `node <role>/.zudui/inbox.js` polls",
+        "the chosen agent framework, and `node <role>/.amp-team/inbox.js` polls",
         "that role's broker inbox with 2s TUI refresh.",
         "",
       ].join("\n"),
@@ -35,7 +35,7 @@ main().then(
   (code) => process.exit(code || 0),
   (err) => {
     process.stderr.write(`\n✖ ${err && err.message ? err.message : err}\n`);
-    if (process.env.ZUDUI_DEBUG && err && err.stack) {
+    if (process.env.AMP_TEAM_DEBUG && err && err.stack) {
       process.stderr.write(`${err.stack}\n`);
     }
     process.exit(1);

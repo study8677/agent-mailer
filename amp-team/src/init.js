@@ -40,17 +40,17 @@ async function runInit(cwd) {
   if (!check.ok) {
     process.stderr.write(`${chalk.red("✖")} ${check.reason}\n`);
     process.stderr.write(
-      `  zudui only runs in an empty directory (developer noise like .git is fine).\n`,
+      `  amp-team only runs in an empty directory (developer noise like .git is fine).\n`,
     );
     return 1;
   }
 
-  process.stdout.write(chalk.cyan.bold("zudui — register an agent team\n"));
+  process.stdout.write(chalk.cyan.bold("amp-team — register an agent team\n"));
   process.stdout.write(chalk.dim(`workdir: ${cwd}\n\n`));
 
   const defaults = {
     team: slugifyTeam(path.basename(cwd)) || "team",
-    brokerUrl: process.env.ZUDUI_BROKER_URL || DEFAULT_BROKER_URL,
+    brokerUrl: process.env.AMP_TEAM_BROKER_URL || DEFAULT_BROKER_URL,
   };
 
   const setup = await collectSetupAnswers(defaults);
@@ -105,7 +105,7 @@ async function runInit(cwd) {
       process.stderr.write(
         chalk.dim(
           `  ${created.length} of ${ROLES.length} agents were created before this. ` +
-            `See .zudui/team.json for the partial state; re-run zudui in a fresh dir after fixing the issue.\n`,
+            `See .amp-team/team.json for the partial state; re-run amp-team in a fresh dir after fixing the issue.\n`,
         ),
       );
       return 2;
@@ -166,7 +166,7 @@ async function runInit(cwd) {
     );
   }
   process.stdout.write(
-    `  ${chalk.cyan(`node pm/.zudui/inbox.js`)}  ${chalk.dim("# live inbox view (2s refresh)")}\n`,
+    `  ${chalk.cyan(`node pm/.amp-team/inbox.js`)}  ${chalk.dim("# live inbox view (2s refresh)")}\n`,
   );
   return 0;
 }
@@ -201,24 +201,28 @@ async function collectSetupAnswers(defaults) {
 
   const frameworks = {};
   for (const role of ROLES) {
-    const resp = await prompts(
-      {
-        type: "select",
-        name: "framework",
-        message: `Agent framework for ${chalk.bold(role.key)} (${role.title})`,
-        choices: FRAMEWORK_CHOICES,
-        initial: 0,
-      },
-      { onCancel: () => false },
-    );
-    if (!resp.framework) return null;
-    if (!SUPPORTED_FRAMEWORKS.includes(resp.framework)) {
-      process.stdout.write(
-        chalk.yellow(`  ! ${resp.framework} is coming soon; falling back to Claude Code for ${role.key}\n`),
+    while (true) {
+      const resp = await prompts(
+        {
+          type: "select",
+          name: "framework",
+          message: `Agent framework for ${chalk.bold(role.key)} (${role.title})`,
+          choices: FRAMEWORK_CHOICES,
+          initial: 0,
+        },
+        { onCancel: () => false },
       );
-      frameworks[role.key] = "claude";
-    } else {
-      frameworks[role.key] = resp.framework;
+      if (!resp.framework) return null;
+      if (SUPPORTED_FRAMEWORKS.includes(resp.framework)) {
+        frameworks[role.key] = resp.framework;
+        break;
+      }
+      // Coming-soon frameworks: refuse and re-prompt. No silent fallback —
+      // a fallback would leave the user with a CLAUDE.md when they thought
+      // they had picked a different runtime.
+      process.stderr.write(
+        chalk.red(`  ✖ ${resp.framework} 即将支持，请选 Claude Code 或 Infiniti-Agent。\n`),
+      );
     }
   }
 
@@ -258,8 +262,8 @@ async function loginInteractive(brokerUrl) {
 
 function materializeRoleDir({ rootDir, role, framework, agent, setupResp, brokerUrl }) {
   const roleDir = path.join(rootDir, role);
-  const zuduiDir = path.join(roleDir, ".zudui");
-  fs.mkdirSync(zuduiDir, { recursive: true });
+  const ampTeamDir = path.join(roleDir, ".amp-team");
+  fs.mkdirSync(ampTeamDir, { recursive: true });
 
   // Identity file: AGENT.md for Claude, SOUL.md for Infiniti (per broker /setup
   // instructions: "Linkyun Infiniti Agent → INFINITI.md（引用 SOUL.md）").
@@ -281,22 +285,22 @@ function materializeRoleDir({ rootDir, role, framework, agent, setupResp, broker
     framework,
     created_at: new Date().toISOString(),
   };
-  const credPath = path.join(zuduiDir, "credentials.json");
+  const credPath = path.join(ampTeamDir, "credentials.json");
   writeSecretFile(credPath, JSON.stringify(credentials, null, 2) + "\n");
 
-  // Copy the inbox template verbatim (zero zudui-package deps at runtime).
+  // Copy the inbox template verbatim (zero amp-team-package deps at runtime).
   const inboxSrc = path.join(__dirname, "templates", "inbox.js");
-  fs.copyFileSync(inboxSrc, path.join(zuduiDir, "inbox.js"));
-  // Make it executable on POSIX so `./pm/.zudui/inbox.js` works too.
+  fs.copyFileSync(inboxSrc, path.join(ampTeamDir, "inbox.js"));
+  // Make it executable on POSIX so `./pm/.amp-team/inbox.js` works too.
   if (process.platform !== "win32") {
-    fs.chmodSync(path.join(zuduiDir, "inbox.js"), 0o755);
+    fs.chmodSync(path.join(ampTeamDir, "inbox.js"), 0o755);
   }
 }
 
 function writeSecretFile(filePath, contents) {
   // Open with 0600 from the start so there's no readable window. On Windows,
   // POSIX permissions are advisory; we still pass the mode (ignored) and rely
-  // on the parent .zudui/ directory being inside the team workdir.
+  // on the parent .amp-team/ directory being inside the team workdir.
   const fd = fs.openSync(filePath, "w", 0o600);
   try {
     fs.writeFileSync(fd, contents);
@@ -313,7 +317,7 @@ function writeSecretFile(filePath, contents) {
 }
 
 function writeTeamMeta(rootDir, teamMeta) {
-  const dir = path.join(rootDir, ".zudui");
+  const dir = path.join(rootDir, ".amp-team");
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(
     path.join(dir, "team.json"),

@@ -1,9 +1,9 @@
 {
-  "name": "zudui",
+  "name": "amp-team",
   "version": "0.1.0",
   "description": "One-shot CLI to register a 4-role agent team (pm/dev/reviewer/support) on amp.linkyun.co and scaffold local workdirs.",
   "bin": {
-    "zudui": "bin/zudui.js"
+    "amp-team": "bin/amp-team.js"
   },
   "main": "src/init.js",
   "engines": {
