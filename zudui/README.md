@@ -1,0 +1,90 @@
+# zudui
+
+One-shot CLI that registers a 4-role agent team (pm / dev / reviewer / support)
+on `amp.linkyun.co` and scaffolds local workdirs ready to launch.
+
+## Install
+
+```bash
+npm install -g .                # from a checkout
+# or, once published: npm install -g zudui
+```
+
+Requires Node.js ≥ 18 (uses built-in `fetch`).
+
+## Usage
+
+In an **empty** directory:
+
+```bash
+zudui
+```
+
+The interactive flow asks for:
+
+- a team name (defaults to the directory basename, slugified to a broker-legal local-part)
+- your `amp.linkyun.co` username and password (password masked)
+- the agent framework for each role:
+  - `Claude Code` ✓
+  - `Infiniti-Agent` ✓
+  - `Codex` / `OpenClaw` / `Dreamfactory` — listed as "即将支持" (selecting one falls back to Claude with a warning)
+
+It then:
+
+1. `POST /users/login` to get a session token
+2. `POST /users/me/agents` four times — one per role
+3. `GET /agents/<id>/setup` to fetch the official `AGENT.md` / `CLAUDE.md` / `INFINITI.md` templates per agent
+4. Materializes each role's workdir:
+   - `<role>/AGENT.md` (or `SOUL.md` for Infiniti)
+   - `<role>/CLAUDE.md` (or `INFINITI.md` for Infiniti)
+   - `<role>/.zudui/credentials.json` — chmod 0600 on POSIX
+   - `<role>/.zudui/inbox.js` — standalone TUI inbox poller (no zudui runtime deps)
+5. Writes `start-<role>.sh` + `start-<role>.cmd` launchers in the team root
+6. Persists `.zudui/team.json` with the agent ID list (and a `partial: true` marker if any step failed)
+
+## Run
+
+```bash
+./start-pm.sh                              # launch Claude / Infiniti in pm/
+node pm/.zudui/inbox.js                    # live inbox (2-second refresh, in-place rewrite)
+```
+
+The inbox viewer rewrites the screen every poll instead of scrolling, so it
+fits in a single pane next to the agent terminal.
+
+## Environment overrides
+
+| var | purpose |
+|---|---|
+| `ZUDUI_BROKER_URL` | default broker URL shown in the prompt (default `https://amp.linkyun.co`) |
+| `ZUDUI_DEBUG` | print error stack traces |
+
+## Layout produced
+
+```
+.
+├── .zudui/team.json
+├── pm/AGENT.md
+├── pm/CLAUDE.md
+├── pm/.zudui/credentials.json     # 0600
+├── pm/.zudui/inbox.js
+├── dev/ … (same shape)
+├── reviewer/ … (same shape)
+├── support/ … (same shape, SOUL.md + INFINITI.md if Infiniti chosen)
+├── start-pm.sh / start-pm.cmd
+├── start-dev.sh / start-dev.cmd
+├── start-reviewer.sh / start-reviewer.cmd
+└── start-support.sh / start-support.cmd
+```
+
+## Tests
+
+```bash
+npm test
+```
+
+The smoke suite covers:
+
+- slug + empty-dir + script generation
+- end-to-end init under a stubbed broker (no network), verifying file layout, secret-file permissions, Bearer/X-API-Key header routing, and SOUL.md/INFINITI.md vs AGENT.md/CLAUDE.md branching
+- partial-failure flow: the `.zudui/team.json` `partial: true` marker is written when broker rejects a creation request mid-team
