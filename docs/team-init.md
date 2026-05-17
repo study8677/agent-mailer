@@ -26,6 +26,27 @@ The interactive wizard asks for:
 3. amp.linkyun.co username + password (password masked, 3 retries on
    bad credentials).
 
+## `permission_mode` semantics across runtimes
+
+`permission_mode` (set in each role's `.agent-mailer/config.toml`) maps to
+runtime-specific flags. The same label has different reach depending on
+runtime — pick deliberately:
+
+| `permission_mode`        | claude                          | codex                                                          | infiniti                                  |
+|--------------------------|---------------------------------|----------------------------------------------------------------|-------------------------------------------|
+| `acceptEdits` (default)  | file edits without prompts; no shell | `--sandbox workspace-write` — file edits **and** sandboxed shell | runtime ignores; uses its own internal defaults |
+| `bypassPermissions`      | all tools without prompts; full shell | `--dangerously-bypass-approvals-and-sandbox` (raw shell, no sandbox) | runtime ignores                            |
+| `plan`                   | plan-only (read-only) mode      | `--sandbox read-only --ask-for-approval never`                 | runtime ignores                            |
+
+Two non-obvious points:
+
+- **Codex's `acceptEdits` includes sandboxed shell**, while claude's
+  `acceptEdits` does **not**. If you want strict no-shell behaviour across
+  both, choose `plan`.
+- **Infiniti ignores `permission_mode` entirely** today (the
+  `infiniti-agent cli` surface has no equivalent flag). The field is still
+  written into config.toml for audit symmetry but has no runtime effect.
+
 ## What it writes
 
 ```
@@ -92,22 +113,34 @@ cat .amp-team/team.json                    # partial: false, 4 agents listed
 #    Test agents are named:  <team>-pm, <team>-dev, <team>-reviewer, <team>-support
 ```
 
-Recommended cleanup script (PM-side, requires the user token):
+Recommended cleanup script (PM-side, requires the user token). The broker's
+`/users/me/agents/{id}` route expects an agent UUID — agent names won't
+resolve — so use the two-step list-then-delete flow:
 
 ```bash
 TEAM=<team-slug>; TOKEN=<bearer>
-for role in pm dev reviewer support; do
-  curl -s -X DELETE "https://amp.linkyun.co/users/me/agents/${TEAM}-${role}" \
-    -H "Authorization: Bearer $TOKEN"
+
+# 1. List your agents, keep only the ones whose name starts with the team slug.
+IDS=$(curl -s -H "Authorization: Bearer $TOKEN" \
+        https://amp.linkyun.co/users/me/agents \
+      | python3 -c "import sys, json; print('\n'.join(
+          a['id'] for a in json.load(sys.stdin) if a['name'].startswith(f'$TEAM-')))")
+
+# 2. Delete each one by ID.
+for ID in $IDS; do
+  curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
+    "https://amp.linkyun.co/users/me/agents/$ID"
 done
 ```
 
-## Migration from `amp-team` (Node)
+`jq` works equally well in place of the inline python (`jq -r '.[] | select(.name | startswith($t+"-")) | .id' --arg t "$TEAM"`).
 
-The standalone `amp-team` Node CLI (in `/amp-team/`) is deprecated. Drop
-in this replacement:
+## Migration from the legacy `amp-team` Node CLI
 
-- Old: `amp-team` (Node, generates `start-<role>.sh` that directly execs
+A standalone `amp-team` npm package shipped briefly with the v0.1.x line
+and was retired in favour of this Python subcommand. Differences:
+
+- Old: `amp-team` (Node, generated `start-<role>.sh` that directly execed
   `claude` / `infiniti`).
 - New: `agent-mailer team init` (Python, generates `start-<role>.sh` that
   execs `agent-mailer watch`, which polls the broker and spawns the
