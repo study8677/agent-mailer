@@ -276,6 +276,36 @@ def finalize_role(workdir: Path, role: str) -> None:
         marker.unlink()
 
 
+# Allow Claude Code's non-interactive `-p` mode to actually hit the broker.
+# Claude's `acceptEdits` permission mode auto-approves only file edits — it
+# stops on Bash/network with "This command requires approval", which the
+# headless watcher can't answer. Surgical allowlist lets curl + agent-mailer
+# through without the blast radius of `bypassPermissions`.
+_CLAUDE_BROKER_ALLOWLIST = [
+    "Bash(curl:*amp.linkyun.co*)",
+    "Bash(agent-mailer:*)",
+]
+
+
+def write_runtime_settings(workdir: Path, role: str, framework: str) -> None:
+    """Drop runtime-specific config so the spawned agent can call the broker.
+
+    - claude → `<role>/.claude/settings.json` permissions.allow allowlist.
+      Without this, claude's `acceptEdits` mode kills every curl with
+      "This command requires approval" and headless `-p` mode can't answer.
+    - codex / infiniti → no-op (codex_runner already passes
+      `--ask-for-approval never`; infiniti CLI surfaces no approval flag).
+    """
+    if framework != "claude":
+        return
+    claude_dir = workdir / role / ".claude"
+    claude_dir.mkdir(parents=True, exist_ok=True)
+    settings_path = claude_dir / "settings.json"
+    settings = {"permissions": {"allow": list(_CLAUDE_BROKER_ALLOWLIST)}}
+    settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+    os.chmod(settings_path, 0o644)
+
+
 def write_start_script(workdir: Path, role: str) -> Path:
     """Write start-<role>.sh that cd's into the role workdir and execs `agent-mailer watch`.
 

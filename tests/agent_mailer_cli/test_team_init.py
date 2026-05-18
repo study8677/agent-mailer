@@ -199,6 +199,34 @@ def test_provision_team_writes_full_layout(tmp_path: Path) -> None:
             assert (role_dir / "CLAUDE.md").exists()
             assert not (role_dir / "SOUL.md").exists()
 
+        # Claude roles MUST ship a .claude/settings.json with the broker
+        # allowlist — otherwise headless watch is dead on arrival because
+        # claude blocks every curl with "This command requires approval".
+        # Codex / infiniti don't need it (codex_runner passes
+        # --ask-for-approval never; infiniti CLI has no approval gate).
+        claude_settings = role_dir / ".claude" / "settings.json"
+        if framework == "claude":
+            assert claude_settings.exists(), (
+                f"{role}/.claude/settings.json missing for claude runtime"
+            )
+            settings = json.loads(claude_settings.read_text(encoding="utf-8"))
+            allow = settings.get("permissions", {}).get("allow", [])
+            assert any("amp.linkyun.co" in pat for pat in allow), (
+                f"broker allowlist missing in {claude_settings}: {allow!r}"
+            )
+            assert any("agent-mailer" in pat for pat in allow), (
+                f"agent-mailer allowlist missing in {claude_settings}: {allow!r}"
+            )
+            if os.name != "nt":
+                mode = stat.S_IMODE(claude_settings.stat().st_mode)
+                assert mode == 0o644, (
+                    f"{claude_settings} mode {mode:o} != 0644"
+                )
+        else:
+            assert not claude_settings.exists(), (
+                f"{role} runtime={framework} should not ship .claude/settings.json"
+            )
+
         # No leftover partial-setup marker on the success path.
         assert not (role_dir / ".agent-mailer" / "partial_setup_pending").exists()
 
@@ -293,6 +321,43 @@ def test_provision_team_aborts_on_invalid_credentials(tmp_path: Path) -> None:
     assert code == 4, f"expected exit 4 on invalid login, got {code}"
     # Nothing should have been written.
     assert not (tmp_path / "pm").exists()
+
+
+def test_write_runtime_settings_claude_writes_broker_allowlist(tmp_path: Path) -> None:
+    """v0.2.x P0 regression: claude `acceptEdits` does NOT auto-approve Bash/network,
+    so headless watch must ship a `.claude/settings.json` that allow-lists the
+    broker URL and the agent-mailer CLI. Without this, every spawned claude
+    burns ~$1.50 / ~4min looping on 'This command requires approval' and the
+    user gets zero reply — the real bug human hit in production."""
+    (tmp_path / "pm").mkdir()
+    team_setup.write_runtime_settings(tmp_path, "pm", "claude")
+
+    settings_path = tmp_path / "pm" / ".claude" / "settings.json"
+    assert settings_path.exists()
+    data = json.loads(settings_path.read_text(encoding="utf-8"))
+    allow = data.get("permissions", {}).get("allow", [])
+    assert any("amp.linkyun.co" in pat for pat in allow), (
+        f"broker URL must be in the allowlist; got {allow!r}"
+    )
+    assert any("agent-mailer" in pat for pat in allow), (
+        f"agent-mailer CLI must be in the allowlist; got {allow!r}"
+    )
+    if os.name != "nt":
+        mode = stat.S_IMODE(settings_path.stat().st_mode)
+        assert mode == 0o644, f"settings.json mode {mode:o} != 0644 (it's not a secret)"
+
+
+def test_write_runtime_settings_skips_non_claude_runtimes(tmp_path: Path) -> None:
+    """codex auto-approves via --ask-for-approval never (codex_runner) and the
+    infiniti CLI surfaces no approval flag at all — neither needs a
+    `.claude/settings.json` (writing one would be misleading)."""
+    for framework in ("codex", "infiniti"):
+        role = f"r-{framework}"
+        (tmp_path / role).mkdir()
+        team_setup.write_runtime_settings(tmp_path, role, framework)
+        assert not (tmp_path / role / ".claude").exists(), (
+            f"runtime={framework} must not create .claude/"
+        )
 
 
 # ---------- infiniti runner ----------

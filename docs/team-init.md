@@ -56,6 +56,8 @@ my-team/
 ├── pm/
 │   ├── .agent-mailer/
 │   │   └── config.toml            # full Config (agent_id, api_key, runtime, …)
+│   ├── .claude/
+│   │   └── settings.json          # broker allowlist (claude runtime only)
 │   ├── AGENT.md                   # broker-supplied identity (or SOUL.md if Infiniti)
 │   └── CLAUDE.md                  # runtime adapter (or INFINITI.md if Infiniti)
 ├── dev/ … (same shape)
@@ -69,6 +71,31 @@ my-team/
 
 Each role workdir is a full `agent-mailer watch` workdir — `doctor`,
 `logs`, `sessions` all work inside it.
+
+### Why `.claude/settings.json` (claude runtime only)
+
+Claude Code's `acceptEdits` permission mode auto-approves file edits but
+**not Bash / network**. In a headless `-p` invocation there is no human to
+type "y", so every `curl https://amp.linkyun.co/...` hangs on "This command
+requires approval" and the watcher burns the full timeout for ~zero
+output. `team init` ships a surgical allowlist:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*amp.linkyun.co*)",
+      "Bash(agent-mailer:*)"
+    ]
+  }
+}
+```
+
+This is intentionally narrow — `bypassPermissions` would solve the same
+problem with much wider blast radius (any Bash). Codex and Infiniti roles
+don't get this file: `codex_runner` already passes
+`--ask-for-approval never`, and the `infiniti-agent cli` surface has no
+approval gate at all.
 
 ## Failure handling
 

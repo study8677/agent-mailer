@@ -27,6 +27,7 @@ from agent_mailer_cli.team_setup import (
     system_prompt_for,
     write_identity_files,
     write_partial_credentials,
+    write_runtime_settings,
     write_start_script,
     write_team_meta,
 )
@@ -172,6 +173,7 @@ def provision_team(
             project_dir=project_dir or "",
             permission_mode=permission_mode,
         )
+        write_runtime_settings(workdir, role, framework)
 
         try:
             setup_resp = fetch_agent_setup(
