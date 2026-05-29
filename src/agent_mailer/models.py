@@ -496,12 +496,6 @@ class ChannelCloseRequest(BaseModel):
     reason: str | None = None
 
 
-class ChannelContinueRequest(BaseModel):
-    agent_id: str | None = None
-    extend_turns: int | None = Field(default=None, ge=1, le=100)
-    extend_minutes: int | None = Field(default=None, ge=1, le=1440)
-
-
 class AdminChannelContinueRequest(BaseModel):
     extend_turns: int | None = Field(default=None, ge=1, le=100)
     extend_minutes: int | None = Field(default=None, ge=1, le=1440)

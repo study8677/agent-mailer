@@ -275,6 +275,43 @@ async def test_admin_list_and_scope(client, alice):
     assert forbidden.status_code == 404
 
 
+async def test_agent_continue_route_removed(client, alice):
+    """P1-1: continue is human-only — no agent-facing (X-API-Key) route exists."""
+    ch = await _create(client, alice)
+    token = ch["join_token"]
+    resp = await client.post(
+        f"/channels/{token}/continue", json={"agent_id": alice["id"], "extend_turns": 5}
+    )
+    assert resp.status_code in (404, 405)
+
+
+async def test_closed_channel_rejects_existing_member_rejoin(client, alice, bob):
+    """P2-2: a closed channel is fully sealed — even an existing member's join is 409."""
+    ch = await _create(client, alice)
+    token = ch["join_token"]
+    await client.post(f"/channels/{token}/join", json={"agent_id": bob["id"]})
+    await client.post(f"/channels/{token}/close", json={"agent_id": alice["id"]})
+
+    rejoin = await client.post(f"/channels/{token}/join", json={"agent_id": bob["id"]})
+    assert rejoin.status_code == 409
+
+
+async def test_pending_channel_allows_existing_member_replay(client, alice, bob):
+    """P2-2 corollary: pending_human still lets an existing member reconnect/replay."""
+    ch = await _create(client, alice)
+    token = ch["join_token"]
+    await client.post(f"/channels/{token}/join", json={"agent_id": bob["id"]})
+    # force the guardrail pause without 10 posts
+    await app.state.db.execute(
+        "UPDATE channels SET status = 'pending_human', close_reason = 'max_turns' WHERE join_token = ?",
+        (token,),
+    )
+    await app.state.db.commit()
+    rejoin = await client.post(f"/channels/{token}/join", json={"agent_id": bob["id"]})
+    assert rejoin.status_code == 200
+    assert rejoin.json()["channel"]["status"] == "pending_human"
+
+
 async def test_admin_human_can_close(client, alice, bob):
     """Operator console kill-switch: human closes via /admin and token dies."""
     ch = await _create(client, alice)

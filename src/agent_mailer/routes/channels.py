@@ -19,6 +19,7 @@ shares the creator's owner. Closing invalidates the token (join / post / etc.
 all reject once ``status != 'open'``).
 """
 
+import logging
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -32,7 +33,6 @@ from agent_mailer.models import (
     AdminChannelCloseRequest,
     AdminChannelContinueRequest,
     ChannelCloseRequest,
-    ChannelContinueRequest,
     ChannelCreateRequest,
     ChannelCreateResponse,
     ChannelInfo,
@@ -48,6 +48,8 @@ from agent_mailer.services.messaging import create_message
 
 router = APIRouter()
 admin_router = APIRouter(prefix="/admin")
+
+logger = logging.getLogger(__name__)
 
 # --- Guardrail defaults (PRD §2.5) ---
 DEFAULT_MAX_TURNS = 10
@@ -233,7 +235,12 @@ async def _notify_owners_closed(db, channel: dict, members: list[dict]) -> None:
             )
             await db.commit()
         except Exception:
-            # Notification is best-effort — never let it undo the close.
+            # Notification is best-effort — never let it undo the close, but
+            # leave a trace so a silently dropped owner notice is debuggable.
+            logger.exception(
+                "channel close notification failed (channel=%s, member=%s)",
+                channel.get("id"), m.get("agent_id"),
+            )
             continue
 
 
@@ -293,13 +300,16 @@ async def join_channel(
     channel = await _channel_by_token(db, token)
     channel = await _maybe_expire(db, channel)
 
-    # Already a member → idempotent replay (no status gate, so a creator can
-    # re-fetch history even after the channel paused).
+    # Already a member → idempotent replay, but honour the close gate: a closed
+    # channel is fully sealed (PRD §7 "close 后 join 一律被拒"), while
+    # pending_human still allows an existing member to reconnect/replay.
     existing = await db.execute(
         "SELECT 1 FROM channel_members WHERE channel_id = ? AND agent_id = ?",
         (channel["id"], req.agent_id),
     )
     if await existing.fetchone():
+        if channel["status"] == "closed":
+            raise HTTPException(status_code=409, detail="Channel is closed, cannot join")
         return ChannelJoinResponse(
             channel=await _channel_info(db, channel),
             history=await _history(db, channel["id"]),
@@ -341,35 +351,44 @@ async def post_channel_message(
             detail=f"Channel is {channel['status']}; not accepting messages",
         )
 
-    new_turn = channel["turn_count"] + 1
-    cursor = await db.execute(
-        "SELECT COALESCE(MAX(seq), 0) AS m FROM channel_messages WHERE channel_id = ?",
-        (channel["id"],),
-    )
-    next_seq = (await cursor.fetchone())["m"] + 1
-
-    hit_cap = new_turn >= channel["max_turns"]
-    new_status = "pending_human" if hit_cap else "open"
-
-    async with db_transaction(db):
-        await db.execute(
-            """INSERT INTO channel_messages (id, channel_id, seq, from_agent, body, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (str(uuid.uuid4()), channel["id"], next_seq, member["agent_address"], req.body, _now()),
+    cid = channel["id"]
+    # Atomic against a concurrent second post: read MAX(seq) inside the txn,
+    # bump turn_count with `turn_count + 1` (not a stale read), and flip to
+    # pending_human in the same UPDATE when the cap is reached. A racing insert
+    # that loses the (channel_id, seq) UNIQUE race is retried once.
+    for attempt in range(2):
+        cursor = await db.execute(
+            "SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM channel_messages WHERE channel_id = ?",
+            (cid,),
         )
-        if hit_cap:
-            await db.execute(
-                "UPDATE channels SET turn_count = ?, status = 'pending_human', close_reason = 'max_turns' WHERE id = ?",
-                (new_turn, channel["id"]),
-            )
-        else:
-            await db.execute(
-                "UPDATE channels SET turn_count = ? WHERE id = ?",
-                (new_turn, channel["id"]),
-            )
+        next_seq = (await cursor.fetchone())["next"]
+        try:
+            async with db_transaction(db):
+                await db.execute(
+                    """INSERT INTO channel_messages (id, channel_id, seq, from_agent, body, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (str(uuid.uuid4()), cid, next_seq, member["agent_address"], req.body, _now()),
+                )
+                await db.execute(
+                    "UPDATE channels SET "
+                    "turn_count = turn_count + 1, "
+                    "status = CASE WHEN turn_count + 1 >= max_turns THEN 'pending_human' ELSE status END, "
+                    "close_reason = CASE WHEN turn_count + 1 >= max_turns THEN 'max_turns' ELSE close_reason END "
+                    "WHERE id = ?",
+                    (cid,),
+                )
+            break
+        except Exception as e:  # noqa: BLE001 — only swallow the UNIQUE(seq) race
+            if attempt == 0 and "unique" in str(e).lower():
+                continue
+            raise
 
+    cursor = await db.execute(
+        "SELECT turn_count, status, max_turns FROM channels WHERE id = ?", (cid,)
+    )
+    row = await cursor.fetchone()
     return ChannelPostMessageResponse(
-        seq=next_seq, status=new_status, turn_count=new_turn, max_turns=channel["max_turns"]
+        seq=next_seq, status=row["status"], turn_count=row["turn_count"], max_turns=row["max_turns"]
     )
 
 
@@ -417,19 +436,11 @@ async def close_channel(
     return await _channel_info(db, channel)
 
 
-@router.post("/channels/{token}/continue", response_model=ChannelInfo)
-async def continue_channel(
-    token: str, req: ChannelContinueRequest, request: Request,
-    user: dict = Depends(get_api_key_user),
-):
-    db = request.app.state.db
-    if not req.agent_id:
-        raise HTTPException(status_code=400, detail="agent_id is required")
-    await _resolve_acting_agent(db, req.agent_id, user["id"])
-    channel = await _channel_by_token(db, token)
-    await _require_member(db, channel["id"], req.agent_id)
-    channel = await _do_continue(db, channel, req.extend_turns, req.extend_minutes)
-    return await _channel_info(db, channel)
+# NOTE: there is deliberately **no** agent-facing (X-API-Key) continue route.
+# Resuming a pending_human channel is a human-only action (locked decision ④):
+# the hard human gate is the whole point of the guardrail, so continue lives
+# exclusively on the operator console (`POST /admin/channels/{token}/continue`).
+# `close` remains agent-reachable (PRD allows member-initiated close).
 
 
 async def _do_continue(db, channel: dict, extend_turns: int | None, extend_minutes: int | None) -> dict:
