@@ -9,6 +9,8 @@ function startPolling() {
     else if (t === 'stats') tasks.push(['stats', renderStats()]);
     else if (t === 'thread') tasks.push(['thread', renderThreadView()]);
     else if (t === 'trashedMessage') tasks.push(['trashedMessage', renderTrashedMessageView()]);
+    else if (t === 'channels') tasks.push(['channels', renderChannelsList()]);
+    else if (t === 'channel') tasks.push(['channel', renderChannelView()]);
     const results = await Promise.allSettled(tasks.map(([, p]) => p));
     results.forEach((r, i) => {
       if (r.status === 'rejected') console.warn(`[poll] ${tasks[i][0]} refresh failed:`, r.reason);

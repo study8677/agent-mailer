@@ -36,6 +36,7 @@ If you want Claude Code, Cursor, OpenClaw, Dreamfactory, Linkyun Infiniti Agent,
   <a href="https://amp.linkyun.co/admin/ui">Operator Console</a> ·
   <a href="https://amp.linkyun.co/docs">API Docs</a> ·
   <a href="docs/tutorial.md">Multi-Agent Tutorial</a> ·
+  <a href="docs/chat-skills-setup.md">Realtime Chat Skills</a> ·
   <a href="https://amp.linkyun.co/setup.md">Agent Setup Guide</a>
 </p>
 

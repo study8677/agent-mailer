@@ -39,5 +39,13 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_mailer", "src/agent_mailer_cli"]
 
+# Ship the realtime-chat skills inside the wheel so `agent-mailer team init`
+# can scaffold them into each agent workdir even when running from an installed
+# package (not just a source checkout). Canonical source stays at repo
+# `.claude/skills/<name>/SKILL.md`.
+[tool.hatch.build.targets.wheel.force-include]
+".claude/skills/agentstartchat/SKILL.md" = "agent_mailer_cli/_skill_templates/agentstartchat/SKILL.md"
+".claude/skills/agentjoinchat/SKILL.md" = "agent_mailer_cli/_skill_templates/agentjoinchat/SKILL.md"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

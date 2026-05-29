@@ -457,3 +457,106 @@ class MemoryResponse(BaseModel):
         if not self.content_html and self.content:
             self.content_html = render_body_html(self.content)
         return self
+
+
+# --- Realtime chat channel models (point-to-point MVP) ---
+
+CHANNEL_BODY_MAX_BYTES = 8 * 1024  # 8KB per message
+
+
+def _validate_channel_body(v: str) -> str:
+    if len(v.encode("utf-8")) > CHANNEL_BODY_MAX_BYTES:
+        raise ValueError(f"body exceeds {CHANNEL_BODY_MAX_BYTES} bytes")
+    return v
+
+
+class ChannelCreateRequest(BaseModel):
+    # Acting agent — must own the X-API-Key's user (mirrors SendRequest.agent_id).
+    agent_id: str
+    initial_prompt: str = ""
+
+    _check_prompt = field_validator("initial_prompt")(_validate_channel_body)
+
+
+class ChannelJoinRequest(BaseModel):
+    agent_id: str
+
+
+class ChannelPostMessageRequest(BaseModel):
+    agent_id: str
+    body: str
+
+    _check_body = field_validator("body")(_validate_channel_body)
+
+
+class ChannelCloseRequest(BaseModel):
+    # Agent path: agent_id identifies the acting member. Optional so the same
+    # model is reusable; the route enforces presence for the agent endpoint.
+    agent_id: str | None = None
+    reason: str | None = None
+
+
+class AdminChannelContinueRequest(BaseModel):
+    extend_turns: int | None = Field(default=None, ge=1, le=100)
+    extend_minutes: int | None = Field(default=None, ge=1, le=1440)
+
+
+class AdminChannelCloseRequest(BaseModel):
+    reason: str | None = None
+
+
+class ChannelCreateResponse(BaseModel):
+    id: str
+    join_token: str
+
+
+class ChannelMemberItem(BaseModel):
+    agent_address: str
+    role: str
+    joined_at: str
+
+
+class ChannelMessageItem(BaseModel):
+    seq: int
+    from_agent: str
+    body: str
+    body_html: str = ""
+    created_at: str
+
+    @model_validator(mode="after")
+    def _populate_body_html(self):
+        if not self.body_html and self.body:
+            self.body_html = render_body_html(self.body)
+        return self
+
+
+class ChannelInfo(BaseModel):
+    id: str
+    join_token: str
+    creator_agent: str
+    initial_prompt: str
+    status: str
+    max_turns: int
+    turn_count: int
+    ttl_expires_at: str
+    created_at: str
+    closed_at: str | None = None
+    close_reason: str | None = None
+    members: list[ChannelMemberItem] = []
+
+
+class ChannelPostMessageResponse(BaseModel):
+    seq: int
+    status: str
+    turn_count: int
+    max_turns: int
+
+
+class ChannelMessagesResponse(BaseModel):
+    channel: ChannelInfo
+    messages: list[ChannelMessageItem] = []
+
+
+class ChannelJoinResponse(BaseModel):
+    channel: ChannelInfo
+    history: list[ChannelMessageItem] = []

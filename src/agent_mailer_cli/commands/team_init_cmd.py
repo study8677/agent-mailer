@@ -25,6 +25,7 @@ from agent_mailer_cli.team_setup import (
     login,
     slugify_team,
     system_prompt_for,
+    write_chat_skills,
     write_identity_files,
     write_partial_credentials,
     write_runtime_settings,
@@ -182,6 +183,7 @@ def provision_team(
             permission_mode=permission_mode,
         )
         write_runtime_settings(workdir, role, framework)
+        write_chat_skills(workdir, role, framework)
 
         try:
             setup_resp = fetch_agent_setup(
