@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from agent_mailer.db import init_db, get_db, DB_PATH
 from agent_mailer.bootstrap import ensure_bootstrap_invite_code
-from agent_mailer.routes import agents, messages, admin, files, teams, memories
+from agent_mailer.routes import agents, messages, admin, files, teams, memories, channels
 from agent_mailer.routes import users as users_routes
 from agent_mailer.routes import me_agents as me_agents_routes
 from agent_mailer.routes import superadmin as superadmin_routes
@@ -37,6 +37,8 @@ app.include_router(superadmin_routes.router)
 app.include_router(files.router)
 app.include_router(teams.router)
 app.include_router(memories.router)
+app.include_router(channels.router)
+app.include_router(channels.admin_router)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 SEO_DIR = STATIC_DIR / "seo"

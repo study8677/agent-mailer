@@ -6,6 +6,7 @@ from agent_mailer.db import INBOX_VISIBILITY_SQL
 from agent_mailer.dependencies import get_api_key_user
 from agent_mailer.forward_body import build_forward_body
 from agent_mailer.models import SendRequest, MessageResponse, PaginatedInboxResponse, render_body_html
+from agent_mailer.services.messaging import create_message
 import math
 
 router = APIRouter()
@@ -106,25 +107,22 @@ async def send_message(
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e)) from e
 
-    now = datetime.now(timezone.utc).isoformat()
-    attachments_json = json.dumps(req.attachments)
     body_html = render_body_html(body_to_store)
 
     results = []
     for addr in recipients:
-        msg_id = str(uuid.uuid4())
-        await db.execute(
-            """INSERT INTO messages (id, thread_id, from_agent, to_agent, action, subject, body, attachments, is_read, parent_id, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)""",
-            (msg_id, thread_id, req.from_agent, addr, req.action,
-             req.subject, body_to_store, attachments_json, req.parent_id, now),
+        msg = await create_message(
+            db,
+            from_agent=req.from_agent,
+            to_agent=addr,
+            action=req.action,
+            subject=req.subject,
+            body=body_to_store,
+            parent_id=req.parent_id,
+            thread_id=thread_id,
+            attachments=req.attachments,
         )
-        results.append(MessageResponse(
-            id=msg_id, thread_id=thread_id, from_agent=req.from_agent,
-            to_agent=addr, action=req.action, subject=req.subject,
-            body=body_to_store, body_html=body_html, attachments=req.attachments,
-            is_read=False, parent_id=req.parent_id, created_at=now,
-        ))
+        results.append(MessageResponse(**msg, body_html=body_html))
     await db.commit()
 
     # backward compatible: return single object for single recipient

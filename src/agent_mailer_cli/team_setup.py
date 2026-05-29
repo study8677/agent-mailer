@@ -307,6 +307,52 @@ def write_runtime_settings(workdir: Path, role: str, framework: str) -> None:
     os.chmod(settings_path, 0o644)
 
 
+# Realtime chat skills shipped into each claude agent's workdir so the agent
+# can invoke `/agentstartchat` / `/agentjoinchat`. Canonical source is the repo
+# `.claude/skills/<name>/SKILL.md` (also force-included into the wheel as
+# `agent_mailer_cli/_skill_templates/<name>/SKILL.md`).
+CHAT_SKILLS = ("agentstartchat", "agentjoinchat")
+
+
+def _load_chat_skill(name: str) -> str | None:
+    """Return SKILL.md text for ``name`` from the wheel copy or the source tree."""
+    # 1) installed wheel — force-included package data
+    try:
+        from importlib.resources import files
+
+        res = files("agent_mailer_cli").joinpath("_skill_templates", name, "SKILL.md")
+        if res.is_file():
+            return res.read_text(encoding="utf-8")
+    except Exception:
+        pass
+    # 2) source checkout — walk up to the repo's .claude/skills
+    here = Path(__file__).resolve()
+    for base in here.parents:
+        cand = base / ".claude" / "skills" / name / "SKILL.md"
+        if cand.is_file():
+            return cand.read_text(encoding="utf-8")
+    return None
+
+
+def write_chat_skills(workdir: Path, role: str, framework: str) -> None:
+    """Drop the realtime-chat skills into a claude agent's ``<role>/.claude/skills``.
+
+    No-op for non-claude frameworks (codex/infiniti discover skills differently
+    or not at all). Best-effort: a missing template is skipped rather than
+    aborting team init.
+    """
+    if framework != "claude":
+        return
+    skills_root = workdir / role / ".claude" / "skills"
+    for name in CHAT_SKILLS:
+        text = _load_chat_skill(name)
+        if not text:
+            continue
+        skill_dir = skills_root / name
+        skill_dir.mkdir(parents=True, exist_ok=True)
+        (skill_dir / "SKILL.md").write_text(text, encoding="utf-8")
+
+
 def write_start_script(workdir: Path, role: str) -> Path:
     """Write start-<role>.sh that cd's into the role workdir and execs `agent-mailer watch`.
 

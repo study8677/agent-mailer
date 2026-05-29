@@ -137,6 +137,48 @@ PG_SCHEMA = [
         updated_at TEXT NOT NULL
     )
     """,
+    # --- Realtime chat channels (point-to-point MVP) ---
+    """
+    CREATE TABLE IF NOT EXISTS channels (
+        id TEXT PRIMARY KEY,
+        join_token TEXT NOT NULL UNIQUE,
+        creator_agent TEXT NOT NULL,
+        initial_prompt TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'pending_human', 'closed')),
+        max_turns INTEGER NOT NULL DEFAULT 10,
+        turn_count INTEGER NOT NULL DEFAULT 0,
+        ttl_expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        closed_at TEXT,
+        close_reason TEXT
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_channels_join_token ON channels(join_token)",
+    "CREATE INDEX IF NOT EXISTS idx_channels_status ON channels(status)",
+    """
+    CREATE TABLE IF NOT EXISTS channel_members (
+        channel_id TEXT NOT NULL REFERENCES channels(id),
+        agent_id TEXT NOT NULL,
+        agent_address TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('creator', 'member')),
+        joined_at TEXT NOT NULL,
+        UNIQUE(channel_id, agent_id)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_channel_members_channel ON channel_members(channel_id)",
+    "CREATE INDEX IF NOT EXISTS idx_channel_members_agent ON channel_members(agent_id)",
+    """
+    CREATE TABLE IF NOT EXISTS channel_messages (
+        id TEXT PRIMARY KEY,
+        channel_id TEXT NOT NULL REFERENCES channels(id),
+        seq INTEGER NOT NULL,
+        from_agent TEXT NOT NULL,
+        body TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        UNIQUE(channel_id, seq)
+    )
+    """,
+    "CREATE INDEX IF NOT EXISTS idx_channel_messages_channel_seq ON channel_messages(channel_id, seq)",
 ]
 
 # SQLite-only legacy schema (for CREATE TABLE IF NOT EXISTS + additive migrations)
@@ -270,6 +312,46 @@ CREATE TABLE IF NOT EXISTS system_settings (
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
+"""
+
+CHANNELS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS channels (
+    id TEXT PRIMARY KEY,
+    join_token TEXT NOT NULL UNIQUE,
+    creator_agent TEXT NOT NULL,
+    initial_prompt TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open', 'pending_human', 'closed')),
+    max_turns INTEGER NOT NULL DEFAULT 10,
+    turn_count INTEGER NOT NULL DEFAULT 0,
+    ttl_expires_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    closed_at TEXT,
+    close_reason TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_channels_join_token ON channels(join_token);
+CREATE INDEX IF NOT EXISTS idx_channels_status ON channels(status);
+
+CREATE TABLE IF NOT EXISTS channel_members (
+    channel_id TEXT NOT NULL REFERENCES channels(id),
+    agent_id TEXT NOT NULL,
+    agent_address TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('creator', 'member')),
+    joined_at TEXT NOT NULL,
+    UNIQUE(channel_id, agent_id)
+);
+CREATE INDEX IF NOT EXISTS idx_channel_members_channel ON channel_members(channel_id);
+CREATE INDEX IF NOT EXISTS idx_channel_members_agent ON channel_members(agent_id);
+
+CREATE TABLE IF NOT EXISTS channel_messages (
+    id TEXT PRIMARY KEY,
+    channel_id TEXT NOT NULL REFERENCES channels(id),
+    seq INTEGER NOT NULL,
+    from_agent TEXT NOT NULL,
+    body TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    UNIQUE(channel_id, seq)
+);
+CREATE INDEX IF NOT EXISTS idx_channel_messages_channel_seq ON channel_messages(channel_id, seq);
 """
 
 # Known setting keys (kept here so callers don't sprinkle string literals)
@@ -542,6 +624,7 @@ async def init_db(db):
         await db.executescript(TEAMS_SCHEMA)
         await db.executescript(TEAM_MEMORIES_SCHEMA)
         await db.executescript(SYSTEM_SETTINGS_SCHEMA)
+        await db.executescript(CHANNELS_SCHEMA)
         await _add_column_if_missing(db, "agents", "tags", "TEXT NOT NULL DEFAULT '[]'")
         await _add_column_if_missing(db, "agents", "user_id", "TEXT")
         await _add_column_if_missing(db, "agents", "last_seen", "TEXT")
