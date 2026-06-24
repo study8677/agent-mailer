@@ -167,6 +167,14 @@ def main():
     md = subparsers.add_parser("migrate-db", help="Migrate local-mode DB to SaaS mode")
     md.add_argument("--password", required=True, help="Password for the admin user")
 
+    # feishu-bridge
+    fb = subparsers.add_parser(
+        "feishu-bridge",
+        help="Start Feishu bridge (human-operator second screen for a group chat)",
+    )
+    fb.add_argument("--host", default=None, help="Bind host (default: FEISHU_BRIDGE_HOST or 0.0.0.0)")
+    fb.add_argument("--port", type=int, default=None, help="Bind port (default: FEISHU_BRIDGE_PORT or 9810)")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -178,6 +186,20 @@ def main():
         asyncio.run(_generate_invite_code(args))
     elif args.command == "migrate-db":
         asyncio.run(_migrate_db(args))
+    elif args.command == "feishu-bridge":
+        _feishu_bridge(args)
+
+
+def _feishu_bridge(args):
+    import uvicorn
+
+    from agent_mailer.feishu.bridge import create_app
+    from agent_mailer.feishu.config import FeishuBridgeConfig
+
+    config = FeishuBridgeConfig.from_env()
+    host = args.host or config.bridge_host
+    port = args.port or config.bridge_port
+    uvicorn.run(create_app(config), host=host, port=port)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "httpx>=0.28",
     "click>=8.1",
+    "cryptography>=42",
 ]
 
 [project.optional-dependencies]
