@@ -138,7 +138,8 @@ def _parse_agent(row) -> dict:
 async def admin_list_agents(request: Request, user: dict = Depends(get_current_user)):
     db = request.app.state.db
     cursor = await db.execute(
-        "SELECT * FROM agents WHERE user_id = ? ORDER BY created_at", (user["id"],)
+        "SELECT * FROM agents WHERE user_id = ? AND COALESCE(status, 'active') != 'deleted' ORDER BY created_at",
+        (user["id"],),
     )
     rows = await cursor.fetchall()
     return [AgentResponse(**_parse_agent(row)) for row in rows]
@@ -224,7 +225,7 @@ async def agents_stats(request: Request, user: dict = Depends(get_current_user))
                    SUM(CASE WHEN action = 'forward' THEN 1 ELSE 0 END) AS forward_count
             FROM messages GROUP BY from_agent
         ) sent ON sent.from_agent = a.address
-        WHERE a.user_id = ?
+        WHERE a.user_id = ? AND COALESCE(a.status, 'active') != 'deleted'
         ORDER BY a.created_at
     """, (user["id"],))
     rows = await cursor.fetchall()
