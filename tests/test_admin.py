@@ -572,6 +572,21 @@ async def test_delete_agent_preserves_messages(client, agents):
     assert len(thread_resp.json()) == 1
 
 
+async def test_soft_deleted_agent_hidden_from_admin_agents_and_stats(client, agents):
+    agent_id = agents["coder"]["id"]
+
+    delete_resp = await client.delete(f"/users/me/agents/{agent_id}")
+    assert delete_resp.status_code == 200
+
+    agents_resp = await client.get("/admin/agents")
+    assert agents_resp.status_code == 200
+    assert agent_id not in {a["id"] for a in agents_resp.json()}
+
+    stats_resp = await client.get("/admin/agents/stats")
+    assert stats_resp.status_code == 200
+    assert agent_id not in {a["agent_id"] for a in stats_resp.json()}
+
+
 # --- Agent Tags ---
 
 async def test_update_agent_tags(client, agents):

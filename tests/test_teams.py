@@ -73,6 +73,29 @@ async def test_get_team_detail(client):
     assert data["agents"] == []
 
 
+async def test_deleted_agent_hidden_from_team_count_and_detail(client):
+    create_resp = await client.post("/admin/teams", json={"name": "Soft Deleted"})
+    team_id = create_resp.json()["id"]
+    agent = await _register_agent(client, "softdel")
+
+    add_resp = await client.post(f"/admin/teams/{team_id}/agents", json={"agent_id": agent["id"]})
+    assert add_resp.status_code == 200
+
+    delete_resp = await client.delete(f"/users/me/agents/{agent['id']}")
+    assert delete_resp.status_code == 200
+
+    teams_resp = await client.get("/admin/teams")
+    assert teams_resp.status_code == 200
+    team = next(t for t in teams_resp.json() if t["id"] == team_id)
+    assert team["agent_count"] == 0
+
+    detail_resp = await client.get(f"/admin/teams/{team_id}")
+    assert detail_resp.status_code == 200
+    detail = detail_resp.json()
+    assert detail["agent_count"] == 0
+    assert detail["agents"] == []
+
+
 async def test_get_team_not_found(client):
     resp = await client.get("/admin/teams/nonexistent-id")
     assert resp.status_code == 404

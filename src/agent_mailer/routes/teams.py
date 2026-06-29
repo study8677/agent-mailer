@@ -59,7 +59,9 @@ async def list_teams(request: Request, user: dict = Depends(get_current_user)):
     cursor = await db.execute(
         """SELECT t.*, COUNT(a.id) AS agent_count
            FROM teams t
-           LEFT JOIN agents a ON a.team_id = t.id
+           LEFT JOIN agents a
+             ON a.team_id = t.id
+            AND COALESCE(a.status, 'active') != 'deleted'
            WHERE t.user_id = ?
            GROUP BY t.id
            ORDER BY t.created_at""",
@@ -80,7 +82,8 @@ async def get_team(team_id: str, request: Request, user: dict = Depends(get_curr
         raise HTTPException(status_code=404, detail="Team not found")
 
     cursor = await db.execute(
-        "SELECT * FROM agents WHERE team_id = ? ORDER BY created_at", (team_id,)
+        "SELECT * FROM agents WHERE team_id = ? AND COALESCE(status, 'active') != 'deleted' ORDER BY created_at",
+        (team_id,),
     )
     agent_rows = await cursor.fetchall()
     agents = [AgentResponse(**_parse_agent(r)) for r in agent_rows]
